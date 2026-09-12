@@ -148,26 +148,32 @@ export default function OverviewPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {congestion?.factors.map((factor, idx) => (
-              <div
-                key={idx}
-                className="rounded-lg border border-slate-200 bg-white p-3 shadow-2xs"
-              >
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-800">{factor.name}</span>
-                  <span className="font-mono font-medium text-blue-700">
-                    +{factor.score_contribution} pts
-                  </span>
+            {congestion?.factors && congestion.factors.length > 0 ? (
+              congestion.factors.map((factor, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-lg border border-slate-200 bg-white p-3 shadow-2xs"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-800">{factor.name}</span>
+                    <span className="font-mono font-medium text-blue-700">
+                      +{factor.score_contribution} pts
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-500 line-clamp-2">
+                    {factor.description}
+                  </p>
+                  <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Weight: {factor.weight > 0 ? `${(factor.weight * 100).toFixed(0)}%` : "Additive"}</span>
+                    <span className="font-medium text-slate-600">Raw: {factor.raw_value}</span>
+                  </div>
                 </div>
-                <p className="mt-1 text-[11px] text-slate-500 line-clamp-2">
-                  {factor.description}
-                </p>
-                <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Weight: {factor.weight > 0 ? `${(factor.weight * 100).toFixed(0)}%` : "Additive"}</span>
-                  <span className="font-medium text-slate-600">Raw: {factor.raw_value}</span>
-                </div>
+              ))
+            ) : (
+              <div className="col-span-full py-4 text-center text-xs text-slate-400 italic">
+                Awaiting real-time congestion telemetry factors...
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
@@ -268,7 +274,7 @@ export default function OverviewPage() {
                     </TableCell>
                     <TableCell className="text-slate-600">{vessel.shipping_line}</TableCell>
                     <TableCell className="font-mono text-xs text-slate-700">
-                      {vessel.cargo_volume.toLocaleString()} TEU
+                      {(vessel.cargo_volume ?? 0).toLocaleString()} TEU
                     </TableCell>
                     <TableCell className="text-xs text-slate-600">
                       {formatDateTime(vessel.eta)}

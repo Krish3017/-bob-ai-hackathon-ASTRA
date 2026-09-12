@@ -111,17 +111,19 @@ export function Header({
           </Button>
         )}
 
-        {/* Demo Seed Reset Button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleResetDemo}
-          title="Restore pristine demo seed data"
-          className="text-slate-500 hover:text-slate-700"
-          leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
-        >
-          Reset Demo
-        </Button>
+        {/* Demo Seed Reset Button (Admin Only) */}
+        {user?.role === "admin" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleResetDemo}
+            title="Restore pristine demo seed data (Admin only)"
+            className="text-slate-500 hover:text-slate-700"
+            leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
+          >
+            Reset Demo
+          </Button>
+        )}
 
         {/* User Identity Chip & Sign Out */}
         {user ? (

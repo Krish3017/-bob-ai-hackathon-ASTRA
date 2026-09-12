@@ -13,9 +13,15 @@ app = FastAPI(
 )
 
 # CORS Middleware configuration
+allowed_origins = list(set([
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    *(settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else [])
+]))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Hackathon developer friendly
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

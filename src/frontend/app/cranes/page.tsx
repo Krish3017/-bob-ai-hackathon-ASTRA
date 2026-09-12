@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/design-system/card";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/design-system/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmpty } from "@/design-system/table";
 import { Badge } from "@/design-system/badge";
 import { Button } from "@/design-system/button";
 import { UpdateResourceModal } from "@/components/dialogs/update-resource-modal";
@@ -65,7 +65,10 @@ export default function CranesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {cranes.map((c) => {
+              {cranes.length === 0 ? (
+                <TableEmpty message="No STS gantry cranes currently recorded." colSpan={7} />
+              ) : (
+                cranes.map((c) => {
                 const assignedBerth = berths.find((b) => b.id === c.assigned_berth_id);
                 return (
                   <TableRow key={c.id}>
@@ -97,7 +100,8 @@ export default function CranesPage() {
                     </TableCell>
                   </TableRow>
                 );
-              })}
+              })
+            )}
             </TableBody>
           </Table>
         </CardContent>

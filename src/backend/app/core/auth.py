@@ -39,72 +39,56 @@ def decode_access_token(token: str) -> Optional[dict]:
 
 def get_current_user(authorization: Optional[str] = Header(None)) -> UserResponse:
     """
-    Extracts and authenticates user from Authorization header:
-    - Standard: 'Bearer <jwt_token>'
-    - Demo/Compatibility fallback: 'Bearer <user_email>' or role identifier.
+    Extracts and validates JWT bearer token from Authorization header.
+    Strictly returns HTTP 401 Unauthorized if missing, malformed, or invalid.
     """
     if not authorization:
-        # Default fallback to first admin user for local / test convenience
-        if port_repo.users:
-            admin = list(port_repo.users.values())[0]
-            return UserResponse(**admin)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Authorization header"
+            detail="Missing Authorization header. Authentication required.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = authorization.replace("Bearer ", "").strip()
+    parts = authorization.strip().split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization format. Must be 'Bearer <token>'",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    # 1. Try decoding as JWT
-    jwt_payload = decode_access_token(token)
-    if jwt_payload:
-        user_id = jwt_payload.get("sub")
-        email = jwt_payload.get("email")
+    token = parts[1].strip()
 
-        # Find in repository
-        if user_id and user_id in port_repo.users:
-            return UserResponse(**port_repo.users[user_id])
+    # 1. Decode and validate JWT
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session token is invalid or has expired. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
+    user_id = payload.get("sub")
+    email = payload.get("email")
+
+    # Match user in persistent repository
+    user = None
+    if user_id and user_id in port_repo.users:
+        user = port_repo.users[user_id]
+    elif email:
         for u in port_repo.users.values():
-            if u.get("email", "").lower() == (email or "").lower():
-                return UserResponse(**u)
+            if u.get("email", "").lower() == email.lower():
+                user = u
+                break
 
-        # Reconstruct from token claims if user was dynamic
-        if email and "role" in jwt_payload:
-            return UserResponse(
-                id=user_id or "temp-id",
-                email=email,
-                full_name=jwt_payload.get("name", email.split("@")[0]),
-                role=jwt_payload.get("role", "viewer"),
-                department=jwt_payload.get("department", "Port Operations"),
-                created_at=datetime.now(timezone.utc)
-            )
-
-    # 2. Compatibility fallback: check by email or role keyword (e.g. for existing tests)
-    for u in port_repo.users.values():
-        if (
-            u["email"].lower() == token.lower()
-            or u["role"].lower() == token.lower()
-            or u["id"] == token
-        ):
-            return UserResponse(**u)
-
-    # 3. If token was provided but could not be resolved
-    if token.startswith("eyJ"): # Looks like a JWT that failed validation
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session token has expired or is invalid. Please log in again."
+            detail="User account associated with this token no longer exists.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Safe fallback to admin
-    if port_repo.users:
-        admin = list(port_repo.users.values())[0]
-        return UserResponse(**admin)
-
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid credentials"
-    )
+    return UserResponse(**user)
 
 
 def require_role(allowed_roles: List[str]):

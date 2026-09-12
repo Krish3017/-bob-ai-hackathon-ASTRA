@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
 import { User, UserRole } from "@/types";
-import { api } from "@/lib/api";
-import { Anchor, ShieldAlert, ArrowLeft, LogOut } from "lucide-react";
+import { api, clearAuthToken, getAuthToken } from "@/lib/api";
+import { Anchor, ShieldAlert, ArrowLeft, LogOut, WifiOff } from "lucide-react";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -32,51 +32,56 @@ export function AppShell({
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [networkWarning, setNetworkWarning] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const token = localStorage.getItem("naviops_token");
+    const token = getAuthToken();
     if (!token) {
       // Force redirect to login page if no token exists
       router.replace("/login");
       return;
     }
 
-    // Attempt to parse cached user
+    // 1. Paint immediately with cached user if available
     const cachedUser = localStorage.getItem("naviops_user");
     if (cachedUser) {
       try {
         const parsed = JSON.parse(cachedUser);
         setUser(parsed);
         setIsLoadingAuth(false);
-        return;
       } catch {
-        // Continue to verify
+        // Continue to fresh verify
       }
     }
 
-    // Verify token with backend
+    // 2. Asynchronously verify token with backend
     api.getMe()
       .then((userData) => {
         setUser(userData);
         localStorage.setItem("naviops_user", JSON.stringify(userData));
         localStorage.setItem("naviops_role", userData.role);
         setIsLoadingAuth(false);
+        setNetworkWarning(null);
       })
-      .catch((err) => {
-        console.warn("Session validation failed, redirecting to login:", err);
-        localStorage.removeItem("naviops_token");
-        localStorage.removeItem("naviops_user");
-        localStorage.removeItem("naviops_role");
-        router.replace("/login");
+      .catch((err: any) => {
+        // Only log out if backend explicitly rejected credentials with 401
+        if (err?.status === 401 || err?.message?.includes("401") || err?.message?.includes("expired")) {
+          console.warn("Session token expired or invalid, redirecting to login:", err);
+          clearAuthToken();
+          router.replace("/login");
+        } else {
+          // Network hiccup or 5xx: preserve session, do not log user out
+          console.warn("Backend connectivity issue (session preserved):", err?.message);
+          setNetworkWarning("Working in cached offline mode. NaviOps backend is temporarily unreachable.");
+          setIsLoadingAuth(false);
+        }
       });
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem("naviops_token");
-    localStorage.removeItem("naviops_user");
-    localStorage.removeItem("naviops_role");
+    clearAuthToken();
     router.replace("/login");
   };
 
@@ -115,6 +120,12 @@ export function AppShell({
           onLogout={handleLogout}
         />
         <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
+          {networkWarning && (
+            <div className="flex items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+              <WifiOff className="h-4 w-4 text-amber-600 flex-none" />
+              <span>{networkWarning}</span>
+            </div>
+          )}
           {allowedRoles && user && !allowedRoles.includes(user.role) ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 md:p-12 shadow-sm text-center max-w-2xl mx-auto my-12">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 shadow-xs mb-4">

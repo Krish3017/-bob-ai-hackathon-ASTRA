@@ -69,8 +69,21 @@ def delete_berth(
     berth_id: str,
     current_user: UserResponse = Depends(require_role(["admin"]))
 ):
-    """Delete a berth (Admin only)"""
+    """Delete a berth (Admin only), safely nullifying referencing vessel and crane assignments"""
     if berth_id not in port_repo.berths:
         raise HTTPException(status_code=404, detail="Berth not found")
+
+    # 1. Unassign any vessels currently allocated to this berth
+    for v in list(port_repo.vessels.values()):
+        if v.get("assigned_berth_id") == berth_id:
+            v["assigned_berth_id"] = None
+            port_repo.vessels[v["id"]] = v
+
+    # 2. Unassign any cranes rail-allocated to this berth
+    for c in list(port_repo.cranes.values()):
+        if c.get("assigned_berth_id") == berth_id:
+            c["assigned_berth_id"] = None
+            port_repo.cranes[c["id"]] = c
+
     del port_repo.berths[berth_id]
     return None

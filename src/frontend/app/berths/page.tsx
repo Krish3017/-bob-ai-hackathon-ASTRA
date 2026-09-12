@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/design-system/card";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/design-system/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmpty } from "@/design-system/table";
 import { Badge } from "@/design-system/badge";
 import { Button } from "@/design-system/button";
 import { UpdateResourceModal } from "@/components/dialogs/update-resource-modal";
@@ -65,7 +65,10 @@ export default function BerthsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {berths.map((b) => {
+              {berths.length === 0 ? (
+                <TableEmpty message="No terminal berths currently recorded." colSpan={7} />
+              ) : (
+                berths.map((b) => {
                 const currentVessel = vessels.find((v) => v.id === b.current_vessel_id);
                 return (
                   <TableRow key={b.id}>
@@ -103,7 +106,8 @@ export default function BerthsPage() {
                     </TableCell>
                   </TableRow>
                 );
-              })}
+              })
+            )}
             </TableBody>
           </Table>
         </CardContent>

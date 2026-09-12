@@ -13,12 +13,24 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-let currentAuthToken = "admin@naviops.port";
+let currentAuthToken = "";
 
 export function setAuthToken(token: string) {
   currentAuthToken = token;
   if (typeof window !== "undefined") {
     localStorage.setItem("naviops_token", token);
+    // Persist to cookie for Next.js middleware and SSR route protection
+    document.cookie = `naviops_token=${encodeURIComponent(token)}; path=/; max-age=86400; SameSite=Lax`;
+  }
+}
+
+export function clearAuthToken() {
+  currentAuthToken = "";
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("naviops_token");
+    localStorage.removeItem("naviops_role");
+    localStorage.removeItem("naviops_user");
+    document.cookie = "naviops_token=; path=/; max-age=0; SameSite=Lax";
   }
 }
 
@@ -26,20 +38,35 @@ export function getAuthToken(): string {
   if (typeof window !== "undefined") {
     const saved = localStorage.getItem("naviops_token");
     if (saved) return saved;
+
+    // Fallback: parse cookie if localStorage was cleared
+    const match = document.cookie.match(new RegExp("(^| )naviops_token=([^;]+)"));
+    if (match) return decodeURIComponent(match[2]);
   }
   return currentAuthToken;
 }
 
 async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = getAuthToken();
-  const headers = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-    ...(options.headers || {}),
+    ...((options.headers as Record<string, string>) || {}),
   };
 
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const url = `${API_BASE}${endpoint}`;
-  const response = await fetch(url, { ...options, headers });
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch (networkErr: any) {
+    const err = new Error(networkErr?.message || "Failed to reach NaviOps API server. Please check your network or server status.") as any;
+    err.status = 0; // Distinguish network disconnect from HTTP 401
+    err.isNetworkError = true;
+    throw err;
+  }
 
   if (!response.ok) {
     let errorDetail = `API Error: ${response.status} ${response.statusText}`;
@@ -49,7 +76,9 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
     } catch {
       // ignore
     }
-    throw new Error(errorDetail);
+    const err = new Error(errorDetail) as any;
+    err.status = response.status;
+    throw err;
   }
 
   if (response.status === 204) {

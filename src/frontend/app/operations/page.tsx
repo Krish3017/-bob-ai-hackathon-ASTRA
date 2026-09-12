@@ -214,7 +214,7 @@ export default function OperationsPage() {
                         {v.shipping_line}
                       </TableCell>
                       <TableCell className="text-xs text-slate-700">
-                        <div>{v.cargo_volume.toLocaleString()} TEU</div>
+                        <div>{(v.cargo_volume ?? 0).toLocaleString()} TEU</div>
                         <div className="text-[11px] text-slate-400">{v.vessel_length}m</div>
                       </TableCell>
                       <TableCell className="text-xs text-slate-600">
@@ -463,7 +463,7 @@ export default function OperationsPage() {
 
                   <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2">
                     <span>
-                      {y.occupied_capacity.toLocaleString()} / {y.total_capacity.toLocaleString()} TEU
+                      {(y.occupied_capacity ?? 0).toLocaleString()} / {(y.total_capacity ?? 0).toLocaleString()} TEU
                     </span>
                     <Button
                       variant="ghost"

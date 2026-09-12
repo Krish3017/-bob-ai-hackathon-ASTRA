@@ -75,8 +75,25 @@ def delete_vessel(
     vessel_id: str,
     current_user: UserResponse = Depends(require_role(["admin"]))
 ):
-    """Delete a vessel record (Admin only)"""
+    """Delete a vessel record (Admin only), releasing any berth or crane occupied by it"""
     if vessel_id not in port_repo.vessels:
         raise HTTPException(status_code=404, detail="Vessel not found")
+
+    # Release any berths occupied by this vessel
+    for b in list(port_repo.berths.values()):
+        if b.get("current_vessel_id") == vessel_id:
+            b["current_vessel_id"] = None
+            if b.get("status") == "Occupied":
+                b["status"] = "Available"
+            port_repo.berths[b["id"]] = b
+
+    # Release any cranes working this vessel
+    for c in list(port_repo.cranes.values()):
+        if c.get("current_vessel_id") == vessel_id:
+            c["current_vessel_id"] = None
+            if c.get("status") == "Busy":
+                c["status"] = "Available"
+            port_repo.cranes[c["id"]] = c
+
     del port_repo.vessels[vessel_id]
     return None

@@ -14,7 +14,7 @@ from app.core.config import settings
 logger = logging.getLogger("naviops.database")
 
 TABLE_COLUMNS = {
-    "users": ["id", "email", "full_name", "role", "department", "created_at"],
+    "users": ["id", "email", "full_name", "role", "department", "password_hash", "created_at"],
     "berths": ["id", "berth_code", "berth_name", "max_vessel_length", "status", "current_vessel_id", "available_from", "created_at", "updated_at"],
     "cranes": ["id", "crane_code", "crane_name", "capacity_per_hour", "status", "current_vessel_id", "assigned_berth_id", "available_from", "created_at", "updated_at"],
     "yards": ["id", "yard_code", "yard_name", "cargo_type", "total_capacity", "occupied_capacity", "status", "updated_at"],
@@ -42,6 +42,7 @@ class SyncedTable(dict):
     """
     In-memory dictionary that automatically persists additions and updates
     to Supabase PostgreSQL in real time, with zero latency on reads.
+    Ensures in-memory rollback if database persistence fails.
     """
     def __init__(self, repo, table_name: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,14 +50,30 @@ class SyncedTable(dict):
         self.table_name = table_name
 
     def __setitem__(self, key, value):
+        old_val = self.get(key)
         super().__setitem__(key, value)
         if hasattr(self, "repo") and self.repo.is_connected:
-            self.repo.persist_item(self.table_name, value)
+            try:
+                self.repo.persist_item(self.table_name, value)
+            except Exception as e:
+                # Rollback on database failure
+                if old_val is not None:
+                    super().__setitem__(key, old_val)
+                else:
+                    super().__delitem__(key)
+                raise e
 
     def __delitem__(self, key):
+        saved = self.get(key)
         super().__delitem__(key)
         if hasattr(self, "repo") and self.repo.is_connected:
-            self.repo.delete_item(self.table_name, key)
+            try:
+                self.repo.delete_item(self.table_name, key)
+            except Exception as e:
+                # Rollback on database failure
+                if saved is not None:
+                    super().__setitem__(key, saved)
+                raise e
 
 
 class PortRepository:
@@ -98,6 +115,12 @@ class PortRepository:
         try:
             with self.get_connection() as conn:
                 with conn.cursor() as cur:
+                    # Ensure password_hash column exists on users table
+                    try:
+                        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;")
+                    except Exception as col_err:
+                        logger.debug(f"Schema check note: {col_err}")
+
                     # Users
                     cur.execute("SELECT * FROM users")
                     db_users = [clean_row(r) for r in cur.fetchall()]
@@ -208,6 +231,7 @@ class PortRepository:
                     cur.execute(query, values)
         except Exception as e:
             logger.error(f"Error persisting to {table_name}: {e}")
+            raise RuntimeError(f"Database write failed for {table_name}: {e}") from e
 
     def delete_item(self, table_name: str, item_id: str):
         """Delete a record from Supabase PostgreSQL."""
@@ -220,6 +244,7 @@ class PortRepository:
                     cur.execute(f"DELETE FROM {table_name} WHERE id = %s", (item_id,))
         except Exception as e:
             logger.error(f"Error deleting from {table_name}: {e}")
+            raise RuntimeError(f"Database delete failed for {table_name}: {e}") from e
 
     def seed_defaults(self):
         """Initial baseline defaults if database is not yet seeded."""

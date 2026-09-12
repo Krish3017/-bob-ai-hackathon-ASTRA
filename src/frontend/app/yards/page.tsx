@@ -77,11 +77,11 @@ export default function YardsPage() {
                 <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-lg border border-slate-100">
                   <div>
                     <span className="text-slate-400 block text-[11px]">Total Capacity</span>
-                    <span className="font-bold text-slate-900">{y.total_capacity.toLocaleString()} TEU</span>
+                    <span className="font-bold text-slate-900">{(y.total_capacity ?? 0).toLocaleString()} TEU</span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[11px]">Occupied Stack</span>
-                    <span className="font-bold text-slate-900">{y.occupied_capacity.toLocaleString()} TEU</span>
+                    <span className="font-bold text-slate-900">{(y.occupied_capacity ?? 0).toLocaleString()} TEU</span>
                   </div>
                 </div>
 
