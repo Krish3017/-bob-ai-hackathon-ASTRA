@@ -28,12 +28,16 @@ export default function OptimizationPage() {
   const [run, setRun] = useState<OptimizationRun | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [berths, setBerths] = useState<Berth[]>([]);
+  const [currentRole, setCurrentRole] = useState<string>("admin");
   const [loading, setLoading] = useState(true);
   const [isSolving, setIsSolving] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [applyMessage, setApplyMessage] = useState<string | null>(null);
 
   const loadData = async () => {
+    if (typeof window !== "undefined") {
+      setCurrentRole(localStorage.getItem("naviops_role") || "admin");
+    }
     try {
       const [latestRun, sum, bList] = await Promise.all([
         api.getLatestOptimizationRun(),
@@ -55,6 +59,10 @@ export default function OptimizationPage() {
   }, []);
 
   const handleGeneratePlan = async () => {
+    if (currentRole === "viewer") {
+      alert("Permission denied: Viewer role cannot trigger optimization runs.");
+      return;
+    }
     setIsSolving(true);
     setApplyMessage(null);
     try {
@@ -71,6 +79,10 @@ export default function OptimizationPage() {
   };
 
   const handleApplyPlan = async () => {
+    if (currentRole !== "admin") {
+      alert("Permission denied: Only Port Managers / Admins have authority to approve and apply schedules.");
+      return;
+    }
     if (!run) return;
     setIsApplying(true);
     try {
@@ -99,14 +111,15 @@ export default function OptimizationPage() {
 
   return (
     <AppShell
-      title="Prediction & 72-Hour Optimization"
-      description="Google OR-Tools CP-SAT engine output for dynamic berth allocation, crane assignments, and delay minimization."
+      title="72-Hour Berth & Resource Optimizer"
+      description="Constraint programming engine (Google OR-Tools CP-SAT) solving berth assignments, crane allocations, and waiting queue delays."
       congestionScore={congestion?.score || 45}
       congestionLevel={congestion?.level || "Moderate"}
       onRefresh={loadData}
+      isRefreshing={loading}
     >
-      {/* Header Action Trigger */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Control Banner */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-blue-600" />
@@ -125,9 +138,15 @@ export default function OptimizationPage() {
             size="md"
             onClick={handleGeneratePlan}
             isLoading={isSolving}
+            disabled={currentRole === "viewer"}
+            title={currentRole === "viewer" ? "Restricted: Viewer role cannot trigger optimization" : "Run CP-SAT solver"}
             leftIcon={<Zap className="h-4 w-4" />}
           >
-            {isSolving ? "Solving CP-SAT Model..." : "Generate Optimized 72-Hour Plan"}
+            {isSolving
+              ? "Solving CP-SAT Model..."
+              : currentRole === "viewer"
+              ? "Solver (Viewer Restricted)"
+              : "Generate Optimized 72-Hour Plan"}
           </Button>
 
           <Button
@@ -135,11 +154,21 @@ export default function OptimizationPage() {
             size="md"
             onClick={handleApplyPlan}
             isLoading={isApplying}
-            disabled={!run || run.applied}
+            disabled={!run || run.applied || currentRole !== "admin"}
             leftIcon={<CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-            title="Applies recommended berth allocations to active fleet (Admin only)"
+            title={
+              currentRole !== "admin"
+                ? "Admin Approval Required: Only Port Manager can apply schedules"
+                : run?.applied
+                ? "Schedule already applied"
+                : "Applies recommended berth allocations to active fleet"
+            }
           >
-            {run?.applied ? "Plan Applied" : "Approve & Apply Plan"}
+            {run?.applied
+              ? "Schedule Applied"
+              : currentRole !== "admin"
+              ? "Approve Plan (Admin Only)"
+              : "Approve & Apply Schedule"}
           </Button>
         </div>
       </div>

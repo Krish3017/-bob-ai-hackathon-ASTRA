@@ -17,6 +17,7 @@ export default function VesselsPage() {
   const [vessels, setVessels] = useState<Vessel[]>([]);
   const [berths, setBerths] = useState<Berth[]>([]);
   const [filter, setFilter] = useState("all");
+  const [currentRole, setCurrentRole] = useState<string>("admin");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [updateModal, setUpdateModal] = useState<{ isOpen: boolean; vessel: Vessel | null }>({
     isOpen: false,
@@ -24,6 +25,9 @@ export default function VesselsPage() {
   });
 
   const loadVessels = async () => {
+    if (typeof window !== "undefined") {
+      setCurrentRole(localStorage.getItem("naviops_role") || "admin");
+    }
     try {
       const [vList, bList] = await Promise.all([api.getVessels(), api.getBerths()]);
       setVessels(vList);
@@ -32,6 +36,7 @@ export default function VesselsPage() {
       console.error(err);
     }
   };
+
 
   useEffect(() => {
     loadVessels();
@@ -80,9 +85,11 @@ export default function VesselsPage() {
           variant="primary"
           size="sm"
           onClick={() => setIsAddOpen(true)}
+          disabled={currentRole === "viewer"}
+          title={currentRole === "viewer" ? "Restricted: Viewer role cannot register vessels" : "Register new vessel"}
           leftIcon={<Plus className="h-4 w-4" />}
         >
-          Add Vessel Record
+          {currentRole === "viewer" ? "Add Vessel (Restricted)" : "Add Vessel Record"}
         </Button>
       </div>
 
@@ -108,17 +115,16 @@ export default function VesselsPage() {
                 <TableHead>ETA</TableHead>
                 <TableHead>Priority</TableHead>
                 <TableHead>Assigned Berth</TableHead>
-                <TableHead>Wait Time</TableHead>
+                <TableHead>Wait Est.</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableEmpty message="No vessels found matching criteria." colSpan={11} />
+                <TableEmpty colSpan={11} message="No vessels found for the selected filter." />
               ) : (
                 filtered.map((v) => {
-                  const b = berths.find((b) => b.id === v.assigned_berth_id);
                   return (
                     <TableRow key={v.id}>
                       <TableCell className="font-semibold text-slate-900">
@@ -127,53 +133,68 @@ export default function VesselsPage() {
                           {v.vessel_code}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">{v.shipping_line}</TableCell>
-                      <TableCell className="text-xs text-slate-600">{v.cargo_type}</TableCell>
-                      <TableCell className="font-mono text-xs text-slate-800">
-                        {v.cargo_volume.toLocaleString()} TEU
+                      <TableCell className="font-medium text-slate-700">
+                        {v.shipping_line}
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">{v.vessel_length}m</TableCell>
-                      <TableCell className="text-xs text-slate-600">{formatDateTime(v.eta)}</TableCell>
+                      <TableCell className="text-slate-600">{v.cargo_type}</TableCell>
+                      <TableCell className="font-mono text-xs">{v.cargo_volume} TEU</TableCell>
+                      <TableCell className="font-mono text-xs">{v.vessel_length}m</TableCell>
+                      <TableCell className="text-xs text-slate-600">
+                        {v.eta ? formatDateTime(v.eta) : "Arrived"}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant="priority" priority={v.priority} />
+                        <Badge variant="priority" priority={v.priority} size="sm">
+                          Tier {v.priority}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-800">
-                        {b ? (
-                          <span className="inline-flex items-center gap-1">
-                            <Anchor className="h-3 w-3 text-blue-600" />
-                            {b.berth_code}
+
+                      <TableCell className="font-mono text-xs font-semibold text-blue-700">
+                        {(() => {
+                          const b = berths.find((item) => item.id === v.assigned_berth_id);
+                          return b ? b.berth_code : <span className="text-slate-400 font-normal italic">Unassigned</span>;
+                        })()}
+                      </TableCell>
+
+                      <TableCell className="font-mono text-xs">
+                        {v.expected_waiting_time > 0 ? (
+                          <span className="text-amber-600 font-semibold">
+                            +{formatDuration(v.expected_waiting_time)}
                           </span>
                         ) : (
-                          <span className="text-slate-400 italic">Unassigned</span>
+                          <span className="text-slate-400">0h</span>
                         )}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-slate-800">
-                        {v.expected_waiting_time > 0
-                          ? formatDuration(v.expected_waiting_time)
-                          : "0h"}
-                      </TableCell>
                       <TableCell>
-                        <Badge variant="status" status={v.status}>
+                        <Badge variant="status" status={v.status} size="sm">
                           {v.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setUpdateModal({ isOpen: true, vessel: v })}
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-rose-600 hover:text-rose-700"
-                            onClick={() => handleDelete(v.id, v.vessel_name)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {currentRole !== "viewer" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setUpdateModal({ isOpen: true, vessel: v })}
+                              title="Update vessel operational status"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {currentRole === "admin" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-rose-600 hover:text-rose-700"
+                              onClick={() => handleDelete(v.id, v.vessel_name)}
+                              title="Delete vessel (Admin Only)"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {currentRole === "viewer" && (
+                            <span className="text-[11px] text-slate-400 italic">Read-Only</span>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

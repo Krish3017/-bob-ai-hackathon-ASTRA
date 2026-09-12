@@ -116,7 +116,23 @@ export function Header({
         >
           Reset Demo
         </Button>
+
+        {/* User Profile Pill & Login Link */}
+        <a
+          href="/login"
+          className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 px-2.5 py-1 text-xs text-slate-700 transition-colors"
+          title="Switch role or sign in with different credentials"
+        >
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+            P
+          </div>
+          <span className="hidden lg:inline font-medium">Session</span>
+          <span className="rounded bg-slate-200 px-1.5 py-0.2 text-[10px] font-semibold uppercase text-slate-700">
+            Login
+          </span>
+        </a>
       </div>
     </header>
   );
 }
+

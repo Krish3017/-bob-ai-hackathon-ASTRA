@@ -20,12 +20,25 @@ class UserResponse(UserBase):
 
 class LoginRequest(BaseModel):
     email: str
+    password: Optional[str] = "admin123"
     role: Optional[str] = None
+
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    department: Optional[str] = "Port Operations"
+
+
+class UserRoleUpdate(BaseModel):
+    role: str = Field(..., description="Role must be 'admin', 'operations', or 'viewer'")
 
 
 class AuthResponse(BaseModel):
     token: str
     user: UserResponse
+
 
 
 # -----------------------------------------------------------------------------

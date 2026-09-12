@@ -167,4 +167,24 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ run_id: runId }),
     }),
+
+  // Auth & Personnel Directory
+  login: (email: string, password?: string, role?: string) =>
+    fetchWithAuth<{ token: string; user: User }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password: password || "admin123", role }),
+    }),
+  signup: (data: { email: string; password: string; full_name: string; department?: string }) =>
+    fetchWithAuth<{ token: string; user: User }>("/api/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getMe: () => fetchWithAuth<User>("/api/auth/me"),
+  getUsers: () => fetchWithAuth<User[]>("/api/auth/users"),
+  updateUserRole: (userId: string, role: string) =>
+    fetchWithAuth<User>(`/api/auth/users/${userId}/role`, {
+      method: "PUT",
+      body: JSON.stringify({ role }),
+    }),
 };
+

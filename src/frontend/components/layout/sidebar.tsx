@@ -18,7 +18,10 @@ import {
   ShieldCheck,
   UserCheck,
   Eye,
+  Users,
+  KeyRound,
 } from "lucide-react";
+
 import { UserRole } from "@/types";
 
 interface SidebarProps {
@@ -76,6 +79,13 @@ const navItems = [
     description: "Active impediments & logs",
   },
   {
+    name: "Personnel & RBAC",
+    href: "/users",
+    icon: Users,
+    description: "User directory & roles",
+    adminOnly: true,
+  },
+  {
     name: "Bob Copilot",
     href: "/copilot",
     icon: Bot,
@@ -118,29 +128,36 @@ export function Sidebar({ currentRole, onRoleChange }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all",
+                "group flex items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-all",
                 isActive
                   ? "bg-blue-50 text-blue-700 font-semibold shadow-xs"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               )}
             >
-              <Icon
-                className={cn(
-                  "h-4 w-4 shrink-0 transition-colors",
-                  isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
-                )}
-              />
-              <span className="truncate">{item.name}</span>
+              <div className="flex items-center gap-3 truncate">
+                <Icon
+                  className={cn(
+                    "h-4 w-4 shrink-0 transition-colors",
+                    isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+                  )}
+                />
+                <span className="truncate">{item.name}</span>
+              </div>
+              {item.adminOnly && (
+                <span className="text-[10px] font-bold uppercase px-1.5 py-0.2 rounded bg-blue-100 text-blue-700">
+                  Admin
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* RBAC Role Switcher (Hackathon Presentation Ready) */}
+      {/* RBAC Role Switcher & Login link */}
       <div className="border-t border-slate-200 bg-slate-50/70 p-3">
         <div className="mb-2 flex items-center justify-between px-1">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-            Active Role
+            Active Persona
           </span>
           <span className="inline-flex items-center gap-1 rounded bg-slate-200/80 px-1.5 py-0.5 text-[10px] font-medium text-slate-700">
             {currentRole === "admin" && <ShieldCheck className="h-3 w-3 text-blue-600" />}
@@ -191,7 +208,24 @@ export function Sidebar({ currentRole, onRoleChange }: SidebarProps) {
             Viewer
           </button>
         </div>
+
+        <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+          <Link
+            href="/login"
+            className="text-slate-600 hover:text-blue-600 font-medium flex items-center gap-1 transition-colors"
+          >
+            <KeyRound className="h-3 w-3" />
+            Switch / Sign In
+          </Link>
+          <Link
+            href="/users"
+            className="text-slate-500 hover:text-slate-800 font-medium"
+          >
+            Manage Roles →
+          </Link>
+        </div>
       </div>
     </aside>
   );
 }
+

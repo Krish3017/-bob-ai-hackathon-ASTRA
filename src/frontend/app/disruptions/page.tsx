@@ -16,9 +16,13 @@ export default function DisruptionsPage() {
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
   const [berths, setBerths] = useState<Berth[]>([]);
   const [cranes, setCranes] = useState<Crane[]>([]);
+  const [currentRole, setCurrentRole] = useState<string>("admin");
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const loadAll = async () => {
+    if (typeof window !== "undefined") {
+      setCurrentRole(localStorage.getItem("naviops_role") || "admin");
+    }
     try {
       const [dList, bList, cList] = await Promise.all([
         api.getDisruptions(),
@@ -59,21 +63,25 @@ export default function DisruptionsPage() {
 
   return (
     <AppShell
-      title="Disruption Management & Incident Logs"
-      description="Record mechanical failures, channel restrictions, and maintenance windows to recalculate port congestion."
+      title="Disruptions & Incident Center"
+      description="Report and resolve unexpected equipment failures, adverse weather, or channel bottlenecks."
       onRefresh={loadAll}
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">
-          Active disruptions inject direct penalty points into the transparent Congestion Index.
-        </p>
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Incident Registry</h2>
+          <p className="text-xs text-slate-500">Active disruptions immediately penalize Congestion Index</p>
+        </div>
+
         <Button
-          variant="destructive"
+          variant="primary"
           size="sm"
           onClick={() => setIsAddOpen(true)}
+          disabled={currentRole === "viewer"}
+          title={currentRole === "viewer" ? "Restricted: Viewer role cannot report incidents" : "Report new incident"}
           leftIcon={<Plus className="h-4 w-4" />}
         >
-          Report New Incident
+          {currentRole === "viewer" ? "Report Incident (Restricted)" : "Report New Incident"}
         </Button>
       </div>
 
