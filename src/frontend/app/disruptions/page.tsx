@@ -70,10 +70,10 @@ export default function DisruptionsPage() {
       description="Report and resolve unexpected equipment failures, adverse weather, or channel bottlenecks."
       onRefresh={loadAll}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-slate-900">Incident Registry</h2>
-          <p className="text-xs text-slate-500">Active disruptions immediately penalize Congestion Index</p>
+      {/* Incident Actions Toolbar */}
+      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs mb-4">
+        <div className="text-xs font-semibold text-slate-800">
+          Active Incidents ({disruptions.filter((d) => d.status === "Active").length}) · Total ({disruptions.length})
         </div>
 
         {currentRole !== "viewer" ? (
@@ -86,23 +86,14 @@ export default function DisruptionsPage() {
             Report New Incident
           </Button>
         ) : (
-          <div className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-500 font-medium italic">
-            Read-Only (Viewer)
+          <div className="text-xs text-slate-400 font-medium italic">
+            Read-Only (Viewer Access)
           </div>
         )}
       </div>
 
       <Card className="border-slate-200">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <CardTitle>Operational Impediments & Disruption Log</CardTitle>
-          </div>
-          <CardDescription>
-            Chronological incidents affecting berths, cranes, or fairway navigation
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           <Table>
             <TableHeader>
               <TableRow>

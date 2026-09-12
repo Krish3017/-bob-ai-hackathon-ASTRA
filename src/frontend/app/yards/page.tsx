@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { AssetTabs } from "@/components/layout/asset-tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/design-system/card";
 import { Badge } from "@/design-system/badge";
 import { Button } from "@/design-system/button";
@@ -37,10 +38,11 @@ export default function YardsPage() {
 
   return (
     <AppShell
-      title="Container Yard Capacity & Stacking Zones"
+      title="Asset Directory: Container Yard Capacity"
       description="Inbound/outbound buffer zones, reefer stacks, and dangerous goods segregation capacity."
       onRefresh={loadYards}
     >
+      <AssetTabs />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {yards.map((y) => {
           const util = y.utilization_percentage || 0;

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { AssetTabs } from "@/components/layout/asset-tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/design-system/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmpty } from "@/design-system/table";
 import { Badge } from "@/design-system/badge";
@@ -36,11 +37,12 @@ export default function BerthsPage() {
 
   return (
     <AppShell
-      title="Berth Terminals & Quay Management"
+      title="Asset Directory: Quay Berths"
       description="Quayside docking infrastructure, structural vessel length limits, and real-time berth assignments."
       onRefresh={loadBerths}
       allowedRoles={["admin", "operations"]}
     >
+      <AssetTabs />
       <Card className="border-slate-200">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">

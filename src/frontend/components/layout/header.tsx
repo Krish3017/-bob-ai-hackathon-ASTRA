@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { RefreshCw, Clock, AlertCircle, RotateCcw } from "lucide-react";
-import { Button } from "@/design-system/button";
-import { Badge } from "@/design-system/badge";
+import React, { useState, useEffect, useRef } from "react";
+import { RefreshCw, RotateCcw, LogOut, Shield, ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { User } from "@/types";
-
+import { cn } from "@/lib/utils";
 
 interface HeaderProps {
   title: string;
@@ -29,31 +27,36 @@ export function Header({
   user,
   onLogout,
 }: HeaderProps) {
-  const [timeStr, setTimeStr] = useState<string>("");
-  const [utcStr, setUtcStr] = useState<string>("");
+  const [updatedTime, setUpdatedTime] = useState<string>("");
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTimeStr(
-        now.toLocaleTimeString("en-US", {
-          hour12: false,
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })
-      );
-      setUtcStr(
-        now.toISOString().substring(11, 19) + " UTC"
-      );
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
+    const now = new Date();
+    setUpdatedTime(
+      now.toLocaleTimeString("en-US", {
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    );
+  }, [isRefreshing]);
+
+  // Close profile dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleResetDemo = async () => {
-    if (confirm("Reset synthetic demo dataset back to initial state?")) {
+    setIsProfileOpen(false);
+    if (confirm("Reset demo dataset back to initial state? (Admin only)")) {
       try {
         await api.resetDemoData();
         if (onRefresh) onRefresh();
@@ -63,85 +66,128 @@ export function Header({
     }
   };
 
+  const statusColor =
+    congestionLevel === "Critical"
+      ? "bg-rose-50 text-rose-700 border-rose-200"
+      : congestionLevel === "High"
+      ? "bg-amber-50 text-amber-700 border-amber-200"
+      : "bg-emerald-50 text-emerald-700 border-emerald-200";
+
+  const dotColor =
+    congestionLevel === "Critical"
+      ? "bg-rose-500"
+      : congestionLevel === "High"
+      ? "bg-amber-500"
+      : "bg-emerald-500";
+
   return (
-    <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur-sm">
-      {/* Page Title & Breadcrumb */}
-      <div>
-        <h1 className="text-lg font-semibold tracking-tight text-slate-900">
+    <header className="sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-6 backdrop-blur-xs">
+      {/* Left: Title & Subtitle */}
+      <div className="flex flex-col justify-center">
+        <h1 className="text-sm font-semibold tracking-tight text-slate-900">
           {title}
         </h1>
         {description && (
-          <p className="text-xs text-slate-500 font-normal">{description}</p>
+          <p className="text-[11px] text-slate-500 font-normal leading-tight">
+            {description}
+          </p>
         )}
       </div>
 
-      {/* Operational Status & Action Controls */}
+      {/* Right: Status Pill, Last Updated, Refresh, Profile Menu */}
       <div className="flex items-center gap-3">
-        {/* Live Port Clock */}
-        <div className="hidden md:flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600 font-mono">
-          <Clock className="h-3.5 w-3.5 text-slate-400" />
-          <span>{timeStr || "19:40:00"}</span>
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-500">{utcStr || "14:10:00 UTC"}</span>
+        {/* Compact Status Pill */}
+        <div
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+            statusColor
+          )}
+        >
+          <span className={cn("h-1.5 w-1.5 rounded-full", dotColor)} />
+          <span>
+            {congestionLevel} · {congestionScore.toFixed(0)}/100
+          </span>
         </div>
 
-        {/* Congestion Score Indicator */}
-        <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1">
-          <span className="text-xs text-slate-500 font-medium">Congestion:</span>
-          <Badge
-            variant="status"
-            status={congestionLevel}
-            size="sm"
-            className="font-semibold text-xs"
-          >
-            {congestionScore.toFixed(0)}/100 · {congestionLevel}
-          </Badge>
+        {/* Compact Last Updated */}
+        <div className="hidden sm:block text-[11px] text-slate-400 font-mono">
+          Updated {updatedTime || "just now"}
         </div>
 
-        {/* Global Refresh Button */}
+        {/* Refresh Action */}
         {onRefresh && (
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             onClick={onRefresh}
-            isLoading={isRefreshing}
-            leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+            disabled={isRefreshing}
+            title="Refresh operational telemetry"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors disabled:opacity-50"
           >
-            Refresh
-          </Button>
+            <RefreshCw
+              className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin text-blue-600")}
+            />
+          </button>
         )}
 
-        {/* Demo Seed Reset Button (Admin Only) */}
-        {user?.role === "admin" && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleResetDemo}
-            title="Restore pristine demo seed data (Admin only)"
-            className="text-slate-500 hover:text-slate-700"
-            leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
-          >
-            Reset Demo
-          </Button>
-        )}
+        {/* Profile Dropdown */}
+        {user && (
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              className="flex items-center gap-2 rounded-full py-0.5 pl-1 pr-2 text-xs hover:bg-slate-100 transition-colors"
+            >
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white">
+                {user.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
+              </div>
+              <span className="font-medium text-slate-700 hidden sm:inline max-w-[120px] truncate">
+                {user.full_name}
+              </span>
+              <ChevronDown className="h-3 w-3 text-slate-400" />
+            </button>
 
-        {/* User Identity Chip & Sign Out */}
-        {user ? (
-          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-              {user.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
-            </div>
-            <span className="font-semibold text-slate-800 hidden sm:inline">
-              {user.full_name}
-            </span>
-            <span className="rounded bg-slate-200 px-1.5 py-0.2 text-[10px] font-bold uppercase text-slate-700">
-              {user.role}
-            </span>
+            {isProfileOpen && (
+              <div className="absolute right-0 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-2 shadow-lg z-50 text-xs">
+                <div className="px-2 py-1.5 border-b border-slate-100 mb-1">
+                  <div className="font-semibold text-slate-900 truncate">
+                    {user.full_name}
+                  </div>
+                  <div className="text-[11px] text-slate-400 truncate">
+                    {user.email}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1 text-[10px] font-medium text-blue-600">
+                    <Shield className="h-3 w-3" />
+                    <span className="capitalize">{user.role} Access</span>
+                  </div>
+                </div>
+
+                {user.role === "admin" && (
+                  <button
+                    type="button"
+                    onClick={handleResetDemo}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-left"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 text-slate-400" />
+                    <span>Reset Demo Data</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsProfileOpen(false);
+                    if (onLogout) onLogout();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-rose-600 hover:bg-rose-50 transition-colors text-left mt-1 border-t border-slate-100 pt-1.5"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            )}
           </div>
-        ) : null}
+        )}
       </div>
     </header>
   );
 }
-
-

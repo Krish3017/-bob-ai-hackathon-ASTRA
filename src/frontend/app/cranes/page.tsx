@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { AssetTabs } from "@/components/layout/asset-tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/design-system/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmpty } from "@/design-system/table";
 import { Badge } from "@/design-system/badge";
@@ -36,11 +37,12 @@ export default function CranesPage() {
 
   return (
     <AppShell
-      title="Ship-to-Shore (STS) Crane Equipment"
+      title="Asset Directory: STS Cranes"
       description="Quay crane operational readiness, hourly handling rates, and maintenance telemetry."
       onRefresh={loadCranes}
       allowedRoles={["admin", "operations"]}
     >
+      <AssetTabs />
       <Card className="border-slate-200">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">

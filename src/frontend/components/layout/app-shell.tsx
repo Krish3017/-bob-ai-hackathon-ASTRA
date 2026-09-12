@@ -108,7 +108,7 @@ export function AppShell({
       <Sidebar user={user} onLogout={handleLogout} />
 
       {/* Main Content Area */}
-      <div className="flex flex-col pl-64">
+      <div className="flex flex-col pl-60">
         <Header
           title={title}
           description={description}

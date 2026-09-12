@@ -1,53 +1,51 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/design-system/card";
-import { Button } from "@/design-system/button";
-import { Badge } from "@/design-system/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmpty } from "@/design-system/table";
+import { Badge } from "@/design-system/badge";
 import { AddVesselModal } from "@/components/dialogs/add-vessel-modal";
 import { AddDisruptionModal } from "@/components/dialogs/add-disruption-modal";
 import { UpdateResourceModal } from "@/components/dialogs/update-resource-modal";
-import { api, getAuthToken } from "@/lib/api";
-import { Vessel, Berth, Crane, Yard, Disruption, DashboardSummary } from "@/types";
+import { api } from "@/lib/api";
+import { Vessel, Berth, Crane } from "@/types";
 import { formatDateTime, formatDuration } from "@/lib/utils";
 import {
   Plus,
   AlertTriangle,
   Anchor,
-  Cpu,
-  Boxes,
   Ship,
   Edit2,
   Trash2,
   Zap,
   Filter,
-  ShieldAlert,
+  Search,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-
-import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function OperationsPage() {
   const [vessels, setVessels] = useState<Vessel[]>([]);
   const [berths, setBerths] = useState<Berth[]>([]);
   const [cranes, setCranes] = useState<Crane[]>([]);
-  const [yards, setYards] = useState<Yard[]>([]);
-  const [disruptions, setDisruptions] = useState<Disruption[]>([]);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [currentRole, setCurrentRole] = useState<string>("operations");
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Filter state
-  const [vesselStatusFilter, setVesselStatusFilter] = useState<string>("all");
+  // Filter & Search
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  // Modals state
+  // Expandable row tracking
+  const [expandedVesselId, setExpandedVesselId] = useState<string | null>(null);
+
+  // Modal dialog states
   const [isAddVesselOpen, setIsAddVesselOpen] = useState(false);
   const [isAddDisruptionOpen, setIsAddDisruptionOpen] = useState(false);
   const [updateModalData, setUpdateModalData] = useState<{
     isOpen: boolean;
-    type: "vessel" | "berth" | "crane" | "yard";
+    type: "vessel" | "berth";
     resource: any;
   }>({
     isOpen: false,
@@ -58,24 +56,17 @@ export default function OperationsPage() {
   const loadAll = async () => {
     try {
       setRefreshing(true);
-      const [vList, bList, cList, yList, dList, sum] = await Promise.all([
+      const [vList, bList, cList] = await Promise.all([
         api.getVessels(),
         api.getBerths(),
         api.getCranes(),
-        api.getYards(),
-        api.getDisruptions(),
-        api.getDashboardSummary(),
       ]);
       setVessels(vList);
       setBerths(bList);
       setCranes(cList);
-      setYards(yList);
-      setDisruptions(dList);
-      setSummary(sum);
     } catch (err) {
       console.error("Error loading operational data:", err);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };
@@ -99,79 +90,80 @@ export default function OperationsPage() {
   };
 
   const filteredVessels = vessels.filter((v) => {
-    if (vesselStatusFilter === "all") return true;
-    return v.status.toLowerCase() === vesselStatusFilter.toLowerCase();
+    const matchesStatus =
+      statusFilter === "all" || v.status.toLowerCase() === statusFilter.toLowerCase();
+    const matchesSearch =
+      searchQuery === "" ||
+      v.vessel_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.vessel_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      v.shipping_line.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
   });
+
+  const toggleRow = (id: string) => {
+    setExpandedVesselId(expandedVesselId === id ? null : id);
+  };
 
   return (
     <AppShell
-      title="Operations Control Dashboard"
-      description="Live quayside telemetry, equipment allocations, disruption management, and operational record updating."
-      congestionScore={summary?.congestion?.score || 45}
-      congestionLevel={summary?.congestion?.level || "Moderate"}
+      title="Operations Workspace"
+      description="Manage vessel arrivals, berth assignments, queue prioritization, and quick status updates."
       onRefresh={loadAll}
       isRefreshing={refreshing}
       allowedRoles={["admin", "operations"]}
     >
-      {/* Action Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      {/* 1. Primary Action Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900">
-            Quick Operational Actions:
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="primary"
-            size="sm"
+          <button
+            type="button"
             onClick={() => setIsAddVesselOpen(true)}
-            leftIcon={<Plus className="h-4 w-4" />}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 transition-colors cursor-pointer"
           >
-            Add Vessel
-          </Button>
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Vessel</span>
+          </button>
 
-          <Button
-            variant="destructive"
-            size="sm"
+          <button
+            type="button"
             onClick={() => setIsAddDisruptionOpen(true)}
-            leftIcon={<AlertTriangle className="h-4 w-4" />}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            Report Disruption
-          </Button>
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+            <span>Report Disruption</span>
+          </button>
 
           <Link href="/optimization">
-            <Button
-              variant="outline"
-              size="sm"
-              leftIcon={<Zap className="h-4 w-4 text-blue-600" />}
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
             >
-              Run 72h Optimization
-            </Button>
+              <Zap className="h-3.5 w-3.5" />
+              <span>Run 72h Solver</span>
+            </button>
           </Link>
         </div>
-      </div>
 
-      {/* 1. Vessel Operations Table */}
-      <Card className="border-slate-200">
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Ship className="h-4 w-4 text-blue-600" />
-              <CardTitle>Vessel Fleet Operations</CardTitle>
-            </div>
-            <CardDescription>
-              Real-time ETA, ETD, cargo volumes, and anchorage wait status
-            </CardDescription>
+        {/* Search & Filter Controls */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 sm:w-48">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search vessel or line..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-md border border-slate-200 bg-slate-50 pl-8 pr-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="h-3.5 w-3.5 text-slate-400" />
+          <div className="relative">
             <select
-              className="h-8 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-medium text-slate-700 focus:outline-none"
-              value={vesselStatusFilter}
-              onChange={(e) => setVesselStatusFilter(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="all">All Vessels ({vessels.length})</option>
+              <option value="all">All Statuses ({vessels.length})</option>
               <option value="Waiting">Waiting ({vessels.filter((v) => v.status === "Waiting").length})</option>
               <option value="Unloading">Unloading ({vessels.filter((v) => v.status === "Unloading").length})</option>
               <option value="Loading">Loading ({vessels.filter((v) => v.status === "Loading").length})</option>
@@ -179,56 +171,75 @@ export default function OperationsPage() {
               <option value="Delayed">Delayed ({vessels.filter((v) => v.status === "Delayed").length})</option>
             </select>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Vessel Name & IMO</TableHead>
-                <TableHead>Carrier</TableHead>
-                <TableHead>Cargo / Length</TableHead>
-                <TableHead>ETA</TableHead>
-                <TableHead>ETD</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Assigned Berth</TableHead>
-                <TableHead>Wait Time</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredVessels.length === 0 ? (
-                <TableEmpty message="No vessels matching filter." colSpan={10} />
-              ) : (
-                filteredVessels.map((v) => {
-                  const assignedBerth = berths.find((b) => b.id === v.assigned_berth_id);
-                  return (
-                    <TableRow key={v.id}>
+        </div>
+      </div>
+
+      {/* 2. Focused Vessel Operations Table */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Ship className="h-4 w-4 text-blue-600" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800">
+              Vessel Fleet Queue ({filteredVessels.length})
+            </h3>
+          </div>
+          <span className="text-[11px] text-slate-400">
+            Click any row to reveal carrier and cargo specifications
+          </span>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-8"></TableHead>
+              <TableHead>Vessel</TableHead>
+              <TableHead>ETA</TableHead>
+              <TableHead>Priority</TableHead>
+              <TableHead>Assigned Berth</TableHead>
+              <TableHead>Wait Time</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredVessels.length === 0 ? (
+              <TableEmpty message="No vessels matching filter." colSpan={8} />
+            ) : (
+              filteredVessels.map((v) => {
+                const assignedBerth = berths.find((b) => b.id === v.assigned_berth_id);
+                const isExpanded = expandedVesselId === v.id;
+
+                return (
+                  <React.Fragment key={v.id}>
+                    <TableRow
+                      className={cn(
+                        "cursor-pointer transition-colors hover:bg-slate-50/80",
+                        isExpanded && "bg-slate-50/50"
+                      )}
+                      onClick={() => toggleRow(v.id)}
+                    >
+                      <TableCell className="w-8 text-center text-slate-400">
+                        {isExpanded ? (
+                          <ChevronUp className="h-3.5 w-3.5 mx-auto" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5 mx-auto" />
+                        )}
+                      </TableCell>
                       <TableCell className="font-semibold text-slate-900">
                         <div>{v.vessel_name}</div>
                         <div className="text-[11px] font-mono font-normal text-slate-400">
                           {v.vessel_code}
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-600 text-xs">
-                        {v.shipping_line}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-700">
-                        <div>{(v.cargo_volume ?? 0).toLocaleString()} TEU</div>
-                        <div className="text-[11px] text-slate-400">{v.vessel_length}m</div>
-                      </TableCell>
                       <TableCell className="text-xs text-slate-600">
                         {formatDateTime(v.eta)}
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
-                        {formatDateTime(v.etd)}
-                      </TableCell>
                       <TableCell>
-                        <Badge variant="priority" priority={v.priority} />
+                        <Badge variant="priority" priority={v.priority} size="sm" />
                       </TableCell>
                       <TableCell className="text-xs font-medium text-slate-800">
                         {assignedBerth ? (
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 text-blue-700">
                             <Anchor className="h-3 w-3 text-blue-600" />
                             {assignedBerth.berth_code}
                           </span>
@@ -237,20 +248,23 @@ export default function OperationsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-xs font-mono font-medium text-slate-700">
-                        {v.expected_waiting_time > 0
-                          ? formatDuration(v.expected_waiting_time)
-                          : "0h"}
+                        {v.expected_waiting_time > 0 ? (
+                          <span className="text-amber-700 font-semibold">
+                            +{formatDuration(v.expected_waiting_time)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">0h</span>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="status" status={v.status}>
+                        <Badge variant="status" status={v.status} size="sm">
                           {v.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          <button
+                            type="button"
                             onClick={() =>
                               setUpdateModalData({
                                 isOpen: true,
@@ -258,236 +272,76 @@ export default function OperationsPage() {
                                 resource: v,
                               })
                             }
-                            title="Edit operational parameters"
+                            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                            title="Update Status / Reassign"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
+                          </button>
+
                           {currentRole === "admin" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                            <button
+                              type="button"
                               onClick={() => handleDeleteVessel(v.id, v.vessel_name)}
-                              title="Delete vessel (Admin role required)"
+                              className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                              title="Delete vessel record (Admin only)"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            </button>
                           )}
                         </div>
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
 
-      {/* 2. Berths & Cranes Dual Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Berths Matrix */}
-        <Card className="border-slate-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Anchor className="h-4 w-4 text-blue-600" />
-                <CardTitle>Berths & Quay Allocation</CardTitle>
-              </div>
-              <CardDescription>
-                Terminal berthing lines and vessel length limits
-              </CardDescription>
-            </div>
-            <Link href="/berths" className="text-xs font-semibold text-blue-600">
-              Manage Berths →
-            </Link>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {berths.map((b) => {
-              const currentVessel = vessels.find((v) => v.id === b.current_vessel_id);
-              return (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 shadow-2xs hover:bg-slate-50/50 transition-colors"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-slate-900">
-                        {b.berth_code}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium">
-                        {b.berth_name}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
-                      <span>Max: {b.max_vessel_length}m</span>
-                      <span>·</span>
-                      <span>
-                        Current: {currentVessel ? currentVessel.vessel_name : "None (Clear)"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="status" status={b.status}>
-                      {b.status}
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setUpdateModalData({
-                          isOpen: true,
-                          type: "berth",
-                          resource: b,
-                        })
-                      }
-                    >
-                      Update
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Cranes STS Grid */}
-        <Card className="border-slate-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Cpu className="h-4 w-4 text-blue-600" />
-                <CardTitle>Ship-to-Shore (STS) Cranes</CardTitle>
-              </div>
-              <CardDescription>
-                Gantry availability and moves-per-hour handling capacity
-              </CardDescription>
-            </div>
-            <Link href="/cranes" className="text-xs font-semibold text-blue-600">
-              Manage Cranes →
-            </Link>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {cranes.map((c) => (
-              <div
-                key={c.id}
-                className="rounded-lg border border-slate-200 bg-white p-3 shadow-2xs hover:bg-slate-50/50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-slate-900">
-                    {c.crane_code}
-                  </span>
-                  <Badge variant="status" status={c.status}>
-                    {c.status}
-                  </Badge>
-                </div>
-                <div className="mt-1 text-[11px] text-slate-500 truncate">
-                  {c.crane_name}
-                </div>
-                <div className="mt-2 flex items-center justify-between text-xs">
-                  <span className="font-mono text-slate-700">
-                    {c.capacity_per_hour} moves/hr
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs px-2"
-                    onClick={() =>
-                      setUpdateModalData({
-                        isOpen: true,
-                        type: "crane",
-                        resource: c,
-                      })
-                    }
-                  >
-                    Edit
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+                    {/* Expandable Details Drawer/Row */}
+                    {isExpanded && (
+                      <TableRow className="bg-slate-50/60 border-t border-slate-100">
+                        <TableCell colSpan={8} className="py-3 px-6">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                            <div>
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                                Shipping Carrier
+                              </span>
+                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                                {v.shipping_line}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                                Cargo Specifications
+                              </span>
+                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                                {(v.cargo_volume ?? 0).toLocaleString()} TEU ({v.cargo_type})
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                                Vessel Length
+                              </span>
+                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                                {v.vessel_length} meters
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                                Estimated Departure (ETD)
+                              </span>
+                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                                {formatDateTime(v.etd)}
+                              </span>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      {/* 3. Yard Capacity Stacking Zones */}
-      <Card className="border-slate-200">
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <Boxes className="h-4 w-4 text-blue-600" />
-              <CardTitle>Container Yard Capacity & Stacking Utilization</CardTitle>
-            </div>
-            <CardDescription>
-              Storage buffer zones and real-time TEU volume tracking
-            </CardDescription>
-          </div>
-          <Link href="/yards" className="text-xs font-semibold text-blue-600">
-            View Yard Details →
-          </Link>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {yards.map((y) => {
-              const util = y.utilization_percentage || 0;
-              const barColor =
-                util >= 90 ? "bg-rose-500" : util >= 75 ? "bg-amber-500" : "bg-blue-600";
-              return (
-                <div
-                  key={y.id}
-                  className="rounded-lg border border-slate-200 bg-white p-4 shadow-2xs hover:shadow-xs transition-shadow"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-xs text-slate-900">{y.yard_code}</span>
-                      <p className="text-[11px] text-slate-500 truncate max-w-[170px]">
-                        {y.yard_name}
-                      </p>
-                    </div>
-                    <Badge variant="status" status={y.status}>
-                      {y.status}
-                    </Badge>
-                  </div>
-
-                  <div className="mt-3">
-                    <div className="flex items-baseline justify-between text-xs mb-1">
-                      <span className="text-slate-500">Utilization:</span>
-                      <span className="font-bold text-slate-900">{util}%</span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${barColor}`}
-                        style={{ width: `${Math.min(100, util)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-2">
-                    <span>
-                      {(y.occupied_capacity ?? 0).toLocaleString()} / {(y.total_capacity ?? 0).toLocaleString()} TEU
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() =>
-                        setUpdateModalData({
-                          isOpen: true,
-                          type: "yard",
-                          resource: y,
-                        })
-                      }
-                    >
-                      Update
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Modal Dialogs */}
+      {/* Modals */}
       <AddVesselModal
         isOpen={isAddVesselOpen}
         onClose={() => setIsAddVesselOpen(false)}
