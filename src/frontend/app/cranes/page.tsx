@@ -39,6 +39,7 @@ export default function CranesPage() {
       title="Ship-to-Shore (STS) Crane Equipment"
       description="Quay crane operational readiness, hourly handling rates, and maintenance telemetry."
       onRefresh={loadCranes}
+      allowedRoles={["admin", "operations"]}
     >
       <Card className="border-slate-200">
         <CardHeader className="pb-3">

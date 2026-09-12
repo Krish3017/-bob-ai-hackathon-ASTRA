@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Anchor, ShieldCheck, UserCheck, Eye, Lock, Mail, User, Building, AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
@@ -28,6 +29,16 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  // If already authenticated, redirect straight to dashboard
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("naviops_token");
+      if (token) {
+        router.replace("/");
+      }
+    }
+  }, [router]);
+
   const handleDemoFill = async (email: string, role: UserRole) => {
     setLoginEmail(email);
     setLoginPassword("admin123");
@@ -36,9 +47,10 @@ export default function LoginPage() {
     try {
       const res = await api.login(email, "admin123", role);
       setAuthToken(res.token);
+      localStorage.setItem("naviops_token", res.token);
       localStorage.setItem("naviops_role", res.user.role);
       localStorage.setItem("naviops_user", JSON.stringify(res.user));
-      router.push("/");
+      window.location.href = "/";
     } catch (err: any) {
       setError(err.message || "Failed to log in with demo account");
       setIsLoading(false);
@@ -56,14 +68,16 @@ export default function LoginPage() {
     try {
       const res = await api.login(loginEmail, loginPassword);
       setAuthToken(res.token);
+      localStorage.setItem("naviops_token", res.token);
       localStorage.setItem("naviops_role", res.user.role);
       localStorage.setItem("naviops_user", JSON.stringify(res.user));
-      router.push("/");
+      window.location.href = "/";
     } catch (err: any) {
       setError(err.message || "Login failed. Please verify credentials.");
       setIsLoading(false);
     }
   };
+
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,12 +95,14 @@ export default function LoginPage() {
         department: signupDept,
       });
       setAuthToken(res.token);
+      localStorage.setItem("naviops_token", res.token);
       localStorage.setItem("naviops_role", res.user.role);
       localStorage.setItem("naviops_user", JSON.stringify(res.user));
       setSuccessMsg("Account successfully created as Viewer (Read-Only). Redirecting to port overview...");
       setTimeout(() => {
-        router.push("/");
-      }, 1200);
+        window.location.href = "/";
+      }, 1000);
+
     } catch (err: any) {
       setError(err.message || "Signup failed. Please try again.");
       setIsLoading(false);

@@ -39,6 +39,7 @@ export default function BerthsPage() {
       title="Berth Terminals & Quay Management"
       description="Quayside docking infrastructure, structural vessel length limits, and real-time berth assignments."
       onRefresh={loadBerths}
+      allowedRoles={["admin", "operations"]}
     >
       <Card className="border-slate-200">
         <CardHeader className="pb-3">

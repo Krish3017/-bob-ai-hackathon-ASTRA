@@ -28,7 +28,7 @@ export default function OptimizationPage() {
   const [run, setRun] = useState<OptimizationRun | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [berths, setBerths] = useState<Berth[]>([]);
-  const [currentRole, setCurrentRole] = useState<string>("admin");
+  const [currentRole, setCurrentRole] = useState<string>("viewer");
   const [loading, setLoading] = useState(true);
   const [isSolving, setIsSolving] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
@@ -36,7 +36,7 @@ export default function OptimizationPage() {
 
   const loadData = async () => {
     if (typeof window !== "undefined") {
-      setCurrentRole(localStorage.getItem("naviops_role") || "admin");
+      setCurrentRole(localStorage.getItem("naviops_role") || "viewer");
     }
     try {
       const [latestRun, sum, bList] = await Promise.all([
@@ -55,6 +55,9 @@ export default function OptimizationPage() {
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentRole(localStorage.getItem("naviops_role") || "viewer");
+    }
     loadData();
   }, []);
 

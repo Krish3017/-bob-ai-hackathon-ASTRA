@@ -5,6 +5,8 @@ import { RefreshCw, Clock, AlertCircle, RotateCcw } from "lucide-react";
 import { Button } from "@/design-system/button";
 import { Badge } from "@/design-system/badge";
 import { api } from "@/lib/api";
+import { User } from "@/types";
+
 
 interface HeaderProps {
   title: string;
@@ -13,6 +15,8 @@ interface HeaderProps {
   congestionLevel?: string;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  user?: User | null;
+  onLogout?: () => void;
 }
 
 export function Header({
@@ -22,6 +26,8 @@ export function Header({
   congestionLevel = "Moderate",
   onRefresh,
   isRefreshing = false,
+  user,
+  onLogout,
 }: HeaderProps) {
   const [timeStr, setTimeStr] = useState<string>("");
   const [utcStr, setUtcStr] = useState<string>("");
@@ -117,22 +123,23 @@ export function Header({
           Reset Demo
         </Button>
 
-        {/* User Profile Pill & Login Link */}
-        <a
-          href="/login"
-          className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 px-2.5 py-1 text-xs text-slate-700 transition-colors"
-          title="Switch role or sign in with different credentials"
-        >
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-            P
+        {/* User Identity Chip & Sign Out */}
+        {user ? (
+          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+              {user.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
+            </div>
+            <span className="font-semibold text-slate-800 hidden sm:inline">
+              {user.full_name}
+            </span>
+            <span className="rounded bg-slate-200 px-1.5 py-0.2 text-[10px] font-bold uppercase text-slate-700">
+              {user.role}
+            </span>
           </div>
-          <span className="hidden lg:inline font-medium">Session</span>
-          <span className="rounded bg-slate-200 px-1.5 py-0.2 text-[10px] font-semibold uppercase text-slate-700">
-            Login
-          </span>
-        </a>
+        ) : null}
       </div>
     </header>
   );
 }
+
 

@@ -23,7 +23,9 @@ import {
   Trash2,
   Zap,
   Filter,
+  ShieldAlert,
 } from "lucide-react";
+
 import Link from "next/link";
 
 export default function OperationsPage() {
@@ -33,6 +35,7 @@ export default function OperationsPage() {
   const [yards, setYards] = useState<Yard[]>([]);
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [currentRole, setCurrentRole] = useState<string>("operations");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -78,6 +81,9 @@ export default function OperationsPage() {
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentRole(localStorage.getItem("naviops_role") || "operations");
+    }
     loadAll();
   }, []);
 
@@ -105,6 +111,7 @@ export default function OperationsPage() {
       congestionLevel={summary?.congestion?.level || "Moderate"}
       onRefresh={loadAll}
       isRefreshing={refreshing}
+      allowedRoles={["admin", "operations"]}
     >
       {/* Action Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -255,15 +262,17 @@ export default function OperationsPage() {
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                            onClick={() => handleDeleteVessel(v.id, v.vessel_name)}
-                            title="Delete vessel (Admin role required)"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {currentRole === "admin" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                              onClick={() => handleDeleteVessel(v.id, v.vessel_name)}
+                              title="Delete vessel (Admin role required)"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

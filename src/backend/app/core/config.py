@@ -35,11 +35,18 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str = ""
     
     # JWT / Auth
-    JWT_SECRET: str = "naviops-port-secret-key-2026"
+    JWT_SECRET: str = "naviops-port-secret-key-2026-astra-bob"
+    JWT_SECRET_KEY: str = ""
+    SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    @property
+    def effective_jwt_secret(self) -> str:
+        return self.JWT_SECRET or self.JWT_SECRET_KEY or self.SECRET_KEY or "naviops-port-secret-key-2026-astra-bob"
+
 
     @property
     def clean_database_url(self) -> str:

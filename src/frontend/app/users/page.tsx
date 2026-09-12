@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/design-system/card";
 import { Badge } from "@/design-system/badge";
 import { Button } from "@/design-system/button";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/design-system/table";
-import { api, getAuthToken, setAuthToken } from "@/lib/api";
+import { api } from "@/lib/api";
 import { User, UserRole } from "@/types";
 import Link from "next/link";
 
@@ -74,14 +74,6 @@ export default function UsersPage() {
     }
   };
 
-  // Switch role to Admin for presentation / evaluation
-  const handleElevateToAdmin = () => {
-    localStorage.setItem("naviops_role", "admin");
-    setCurrentRole("admin");
-    setAuthToken("admin@naviops.port");
-    fetchUsersData();
-  };
-
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -101,36 +93,8 @@ export default function UsersPage() {
       description="Manage port personnel directory, assign operational privileges, and review access levels."
       onRefresh={fetchUsersData}
       isRefreshing={isLoading}
+      allowedRoles={["admin"]}
     >
-      {/* RBAC Protection Gate */}
-      {currentRole !== "admin" && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-xs">
-          <div className="flex items-start gap-4">
-            <div className="rounded-lg bg-amber-100 p-2 text-amber-700">
-              <ShieldAlert className="h-6 w-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-base font-semibold text-amber-900">
-                Administrator Privileges Required
-              </h3>
-              <p className="mt-1 text-sm text-amber-700">
-                You are currently viewing this screen as <strong>{currentRole.toUpperCase()}</strong>.
-                Only users with the <strong>Port Manager / Admin</strong> role have authority to inspect user directories and elevate role permissions.
-              </p>
-              <div className="mt-4 flex items-center gap-3">
-                <Button variant="primary" size="sm" onClick={handleElevateToAdmin}>
-                  Switch to Admin Persona
-                </Button>
-                <Link href="/login">
-                  <Button variant="outline" size="sm">
-                    Sign In with Admin Credentials
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Admin View */}
       {currentRole === "admin" && (

@@ -17,7 +17,7 @@ export default function VesselsPage() {
   const [vessels, setVessels] = useState<Vessel[]>([]);
   const [berths, setBerths] = useState<Berth[]>([]);
   const [filter, setFilter] = useState("all");
-  const [currentRole, setCurrentRole] = useState<string>("admin");
+  const [currentRole, setCurrentRole] = useState<string>("operations");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [updateModal, setUpdateModal] = useState<{ isOpen: boolean; vessel: Vessel | null }>({
     isOpen: false,
@@ -26,7 +26,7 @@ export default function VesselsPage() {
 
   const loadVessels = async () => {
     if (typeof window !== "undefined") {
-      setCurrentRole(localStorage.getItem("naviops_role") || "admin");
+      setCurrentRole(localStorage.getItem("naviops_role") || "operations");
     }
     try {
       const [vList, bList] = await Promise.all([api.getVessels(), api.getBerths()]);
@@ -36,7 +36,6 @@ export default function VesselsPage() {
       console.error(err);
     }
   };
-
 
   useEffect(() => {
     loadVessels();
@@ -63,6 +62,7 @@ export default function VesselsPage() {
       title="Vessels Fleet Management"
       description="Track inbound container ships, bulk carriers, and tankers with real-time ETA/ETD and priority tiers."
       onRefresh={loadVessels}
+      allowedRoles={["admin", "operations"]}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -85,11 +85,9 @@ export default function VesselsPage() {
           variant="primary"
           size="sm"
           onClick={() => setIsAddOpen(true)}
-          disabled={currentRole === "viewer"}
-          title={currentRole === "viewer" ? "Restricted: Viewer role cannot register vessels" : "Register new vessel"}
           leftIcon={<Plus className="h-4 w-4" />}
         >
-          {currentRole === "viewer" ? "Add Vessel (Restricted)" : "Add Vessel Record"}
+          Add Vessel Record
         </Button>
       </div>
 

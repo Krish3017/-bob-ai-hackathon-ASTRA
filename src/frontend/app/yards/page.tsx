@@ -12,12 +12,16 @@ import { Boxes, Edit2, AlertCircle } from "lucide-react";
 
 export default function YardsPage() {
   const [yards, setYards] = useState<Yard[]>([]);
+  const [currentRole, setCurrentRole] = useState<string>("viewer");
   const [updateModal, setUpdateModal] = useState<{ isOpen: boolean; yard: Yard | null }>({
     isOpen: false,
     yard: null,
   });
 
   const loadYards = async () => {
+    if (typeof window !== "undefined") {
+      setCurrentRole(localStorage.getItem("naviops_role") || "viewer");
+    }
     try {
       const yList = await api.getYards();
       setYards(yList);
@@ -29,6 +33,7 @@ export default function YardsPage() {
   useEffect(() => {
     loadYards();
   }, []);
+
 
   return (
     <AppShell
@@ -82,17 +87,24 @@ export default function YardsPage() {
 
                 <div className="flex justify-between items-center pt-2 border-t border-slate-100">
                   <span className="text-xs text-slate-500 font-medium">{y.cargo_type}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setUpdateModal({ isOpen: true, yard: y })}
-                    leftIcon={<Edit2 className="h-3.5 w-3.5" />}
-                  >
-                    Update TEU
-                  </Button>
+                  {currentRole !== "viewer" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUpdateModal({ isOpen: true, yard: y })}
+                      leftIcon={<Edit2 className="h-3.5 w-3.5" />}
+                    >
+                      Update TEU
+                    </Button>
+                  ) : (
+                    <span className="text-[11px] text-slate-400 font-medium italic">
+                      Read-Only (Viewer)
+                    </span>
+                  )}
                 </div>
               </CardContent>
             </Card>
+
           );
         })}
       </div>

@@ -16,12 +16,12 @@ export default function DisruptionsPage() {
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
   const [berths, setBerths] = useState<Berth[]>([]);
   const [cranes, setCranes] = useState<Crane[]>([]);
-  const [currentRole, setCurrentRole] = useState<string>("admin");
+  const [currentRole, setCurrentRole] = useState<string>("viewer");
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const loadAll = async () => {
     if (typeof window !== "undefined") {
-      setCurrentRole(localStorage.getItem("naviops_role") || "admin");
+      setCurrentRole(localStorage.getItem("naviops_role") || "viewer");
     }
     try {
       const [dList, bList, cList] = await Promise.all([
@@ -38,6 +38,9 @@ export default function DisruptionsPage() {
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentRole(localStorage.getItem("naviops_role") || "viewer");
+    }
     loadAll();
   }, []);
 
@@ -73,16 +76,20 @@ export default function DisruptionsPage() {
           <p className="text-xs text-slate-500">Active disruptions immediately penalize Congestion Index</p>
         </div>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setIsAddOpen(true)}
-          disabled={currentRole === "viewer"}
-          title={currentRole === "viewer" ? "Restricted: Viewer role cannot report incidents" : "Report new incident"}
-          leftIcon={<Plus className="h-4 w-4" />}
-        >
-          {currentRole === "viewer" ? "Report Incident (Restricted)" : "Report New Incident"}
-        </Button>
+        {currentRole !== "viewer" ? (
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsAddOpen(true)}
+            leftIcon={<Plus className="h-4 w-4" />}
+          >
+            Report New Incident
+          </Button>
+        ) : (
+          <div className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-500 font-medium italic">
+            Read-Only (Viewer)
+          </div>
+        )}
       </div>
 
       <Card className="border-slate-200">
@@ -139,7 +146,7 @@ export default function DisruptionsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        {d.status === "Active" && (
+                        {currentRole !== "viewer" && d.status === "Active" && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -150,16 +157,25 @@ export default function DisruptionsPage() {
                             Resolve
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-rose-600 hover:text-rose-700"
-                          onClick={() => handleDelete(d.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        {currentRole === "admin" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-rose-600 hover:text-rose-700"
+                            onClick={() => handleDelete(d.id)}
+                            title="Delete incident (Admin Only)"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        {currentRole === "viewer" && (
+                          <span className="text-[11px] text-slate-400 font-medium italic">
+                            Read-Only
+                          </span>
+                        )}
                       </div>
                     </TableCell>
+
                   </TableRow>
                 ))
               )}
