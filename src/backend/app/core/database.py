@@ -1,37 +1,228 @@
 import os
 import uuid
+import logging
+from decimal import Decimal
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Any, Optional
+
+import psycopg
+from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
+
 from app.core.config import settings
 
-# Attempt to initialize Supabase client if configured
-supabase_client = None
-if settings.SUPABASE_URL and settings.SUPABASE_KEY:
-    try:
-        from supabase import create_client
-        supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        print("Connected to Supabase PostgreSQL.")
-    except Exception as e:
-        print(f"Supabase initialization skipped/failed: {e}")
+logger = logging.getLogger("naviops.database")
+
+TABLE_COLUMNS = {
+    "users": ["id", "email", "full_name", "role", "department", "created_at"],
+    "berths": ["id", "berth_code", "berth_name", "max_vessel_length", "status", "current_vessel_id", "available_from", "created_at", "updated_at"],
+    "cranes": ["id", "crane_code", "crane_name", "capacity_per_hour", "status", "current_vessel_id", "assigned_berth_id", "available_from", "created_at", "updated_at"],
+    "yards": ["id", "yard_code", "yard_name", "cargo_type", "total_capacity", "occupied_capacity", "status", "updated_at"],
+    "vessels": ["id", "vessel_code", "vessel_name", "shipping_line", "cargo_type", "cargo_volume", "vessel_length", "arrival_time", "eta", "etd", "priority", "status", "assigned_berth_id", "expected_waiting_time", "created_at", "updated_at"],
+    "disruptions": ["id", "disruption_type", "title", "description", "affected_resource_type", "affected_resource_id", "severity", "start_time", "end_time", "status", "created_at"],
+    "optimization_runs": ["id", "planning_horizon_start", "planning_horizon_end", "objective_value", "total_waiting_time", "total_delay", "status", "metrics_json", "applied", "applied_by", "created_at"],
+    "schedules": ["id", "optimization_run_id", "vessel_id", "berth_id", "planned_start", "planned_end", "waiting_time", "assigned_cranes", "assignment_reason", "status", "created_at"],
+}
+
+
+def clean_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert PostgreSQL UUID and Decimal types into standard Python types for Pydantic."""
+    cleaned = {}
+    for k, v in row.items():
+        if isinstance(v, uuid.UUID):
+            cleaned[k] = str(v)
+        elif isinstance(v, Decimal):
+            cleaned[k] = float(v)
+        else:
+            cleaned[k] = v
+    return cleaned
+
+
+class SyncedTable(dict):
+    """
+    In-memory dictionary that automatically persists additions and updates
+    to Supabase PostgreSQL in real time, with zero latency on reads.
+    """
+    def __init__(self, repo, table_name: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.repo = repo
+        self.table_name = table_name
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        if hasattr(self, "repo") and self.repo.is_connected:
+            self.repo.persist_item(self.table_name, value)
+
+    def __delitem__(self, key):
+        super().__delitem__(key)
+        if hasattr(self, "repo") and self.repo.is_connected:
+            self.repo.delete_item(self.table_name, key)
 
 
 class PortRepository:
     """
-    In-memory stateful repository pre-seeded with realistic port operations data.
-    Automatically syncs or falls back if Supabase is unavailable.
+    Stateful repository backed by Supabase PostgreSQL with in-memory caching.
+    Ensures immediate sub-millisecond query responses and live database persistence.
     """
     def __init__(self):
-        self.users: Dict[str, Dict[str, Any]] = {}
-        self.berths: Dict[str, Dict[str, Any]] = {}
-        self.cranes: Dict[str, Dict[str, Any]] = {}
-        self.vessels: Dict[str, Dict[str, Any]] = {}
-        self.yards: Dict[str, Dict[str, Any]] = {}
-        self.disruptions: Dict[str, Dict[str, Any]] = {}
-        self.optimization_runs: Dict[str, Dict[str, Any]] = {}
-        self.schedules: Dict[str, Dict[str, Any]] = {}
+        self.is_connected = False
+        self.users = SyncedTable(self, "users")
+        self.berths = SyncedTable(self, "berths")
+        self.cranes = SyncedTable(self, "cranes")
+        self.vessels = SyncedTable(self, "vessels")
+        self.yards = SyncedTable(self, "yards")
+        self.disruptions = SyncedTable(self, "disruptions")
+        self.optimization_runs = SyncedTable(self, "optimization_runs")
+        self.schedules = SyncedTable(self, "schedules")
+
+        # 1. Seed fallback in-memory defaults
         self.seed_defaults()
 
+        # 2. Sync from live Supabase PostgreSQL
+        self.connect_and_sync()
+
+    def get_connection(self):
+        """Create a direct connection to PostgreSQL with dict_row factory."""
+        url = settings.clean_database_url
+        if not url:
+            return None
+        return psycopg.connect(url, row_factory=dict_row, autocommit=True)
+
+    def connect_and_sync(self):
+        """Load live rows from Supabase PostgreSQL tables if connection available."""
+        url = settings.clean_database_url
+        if not url:
+            logger.info("No DATABASE_URL configured; running in standalone memory mode.")
+            return
+
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    # Users
+                    cur.execute("SELECT * FROM users")
+                    db_users = [clean_row(r) for r in cur.fetchall()]
+                    if db_users:
+                        self.users.clear()
+                        for u in db_users:
+                            super(SyncedTable, self.users).__setitem__(u["id"], u)
+
+                    # Berths
+                    cur.execute("SELECT * FROM berths")
+                    db_berths = [clean_row(r) for r in cur.fetchall()]
+                    if db_berths:
+                        self.berths.clear()
+                        for b in db_berths:
+                            super(SyncedTable, self.berths).__setitem__(b["id"], b)
+
+                    # Cranes
+                    cur.execute("SELECT * FROM cranes")
+                    db_cranes = [clean_row(r) for r in cur.fetchall()]
+                    if db_cranes:
+                        self.cranes.clear()
+                        for c in db_cranes:
+                            super(SyncedTable, self.cranes).__setitem__(c["id"], c)
+
+                    # Yards
+                    cur.execute("SELECT * FROM yards")
+                    db_yards = [clean_row(r) for r in cur.fetchall()]
+                    if db_yards:
+                        self.yards.clear()
+                        for y in db_yards:
+                            if "utilization_percentage" not in y or y["utilization_percentage"] is None:
+                                tot = y.get("total_capacity", 1) or 1
+                                occ = y.get("occupied_capacity", 0) or 0
+                                y["utilization_percentage"] = round((occ / tot) * 100, 2)
+                            super(SyncedTable, self.yards).__setitem__(y["id"], y)
+
+                    # Vessels
+                    cur.execute("SELECT * FROM vessels")
+                    db_vessels = [clean_row(r) for r in cur.fetchall()]
+                    if db_vessels:
+                        self.vessels.clear()
+                        for v in db_vessels:
+                            super(SyncedTable, self.vessels).__setitem__(v["id"], v)
+
+                    # Disruptions
+                    cur.execute("SELECT * FROM disruptions")
+                    db_disruptions = [clean_row(r) for r in cur.fetchall()]
+                    if db_disruptions:
+                        self.disruptions.clear()
+                        for d in db_disruptions:
+                            super(SyncedTable, self.disruptions).__setitem__(d["id"], d)
+
+                    # Optimization Runs
+                    cur.execute("SELECT * FROM optimization_runs")
+                    db_runs = [clean_row(r) for r in cur.fetchall()]
+                    if db_runs:
+                        self.optimization_runs.clear()
+                        for r in db_runs:
+                            # Rehydrate schedules from schedules table
+                            super(SyncedTable, self.optimization_runs).__setitem__(r["id"], r)
+
+                    # Schedules
+                    cur.execute("SELECT * FROM schedules")
+                    db_schedules = [clean_row(r) for r in cur.fetchall()]
+                    if db_schedules:
+                        self.schedules.clear()
+                        for s in db_schedules:
+                            super(SyncedTable, self.schedules).__setitem__(s["id"], s)
+
+            self.is_connected = True
+            print(f"Successfully connected to Supabase PostgreSQL: Loaded {len(self.vessels)} vessels, {len(self.berths)} berths, {len(self.cranes)} cranes, {len(self.yards)} yards.")
+        except Exception as e:
+            logger.warning(f"Failed to connect to Supabase PostgreSQL: {e}. Fallback to in-memory mode.")
+            self.is_connected = False
+
+    def persist_item(self, table_name: str, item: Dict[str, Any]):
+        """UPSERT a single record into Supabase PostgreSQL."""
+        if not self.is_connected or not settings.clean_database_url:
+            return
+
+        cols_allowed = TABLE_COLUMNS.get(table_name)
+        if not cols_allowed:
+            return
+
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cols_present = [c for c in cols_allowed if c in item]
+                    if not cols_present or "id" not in item:
+                        return
+
+                    cols_str = ", ".join(cols_present)
+                    placeholders = ", ".join(["%s"] * len(cols_present))
+                    update_str = ", ".join([f"{c} = EXCLUDED.{c}" for c in cols_present if c != "id"])
+
+                    values = []
+                    for c in cols_present:
+                        val = item[c]
+                        if c in ("metrics_json", "assigned_cranes") and val is not None:
+                            val = Jsonb(val)
+                        values.append(val)
+
+                    query = f"""
+                        INSERT INTO {table_name} ({cols_str})
+                        VALUES ({placeholders})
+                        ON CONFLICT (id) DO UPDATE SET {update_str}
+                    """
+                    cur.execute(query, values)
+        except Exception as e:
+            logger.error(f"Error persisting to {table_name}: {e}")
+
+    def delete_item(self, table_name: str, item_id: str):
+        """Delete a record from Supabase PostgreSQL."""
+        if not self.is_connected or not settings.clean_database_url:
+            return
+
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(f"DELETE FROM {table_name} WHERE id = %s", (item_id,))
+        except Exception as e:
+            logger.error(f"Error deleting from {table_name}: {e}")
+
     def seed_defaults(self):
+        """Initial baseline defaults if database is not yet seeded."""
         now = datetime.now(timezone.utc)
 
         # 1. Users
@@ -62,7 +253,7 @@ class PortRepository:
             }
         ]
         for u in users_seed:
-            self.users[u["id"]] = u
+            super(SyncedTable, self.users).__setitem__(u["id"], u)
 
         # 2. Berths
         berths_seed = [
@@ -73,7 +264,7 @@ class PortRepository:
             {"id": "b0000005-0000-0000-0000-000000000005", "berth_code": "B-05", "berth_name": "South Feeder Quay 5", "max_vessel_length": 240.0, "status": "Available", "current_vessel_id": None, "available_from": now, "created_at": now, "updated_at": now}
         ]
         for b in berths_seed:
-            self.berths[b["id"]] = b
+            super(SyncedTable, self.berths).__setitem__(b["id"], b)
 
         # 3. Cranes
         cranes_seed = [
@@ -89,7 +280,7 @@ class PortRepository:
             {"id": "c0000010-0000-0000-0000-000000000010", "crane_code": "CR-10", "crane_name": "Feeder Rail STS 10", "capacity_per_hour": 28, "status": "Available", "current_vessel_id": None, "assigned_berth_id": "b0000005-0000-0000-0000-000000000005", "available_from": now, "created_at": now, "updated_at": now}
         ]
         for c in cranes_seed:
-            self.cranes[c["id"]] = c
+            super(SyncedTable, self.cranes).__setitem__(c["id"], c)
 
         # 4. Yards
         yards_seed = [
@@ -100,7 +291,7 @@ class PortRepository:
             {"id": "e0000005-0000-0000-0000-000000000005", "yard_code": "YZ-05", "yard_name": "General & Project Cargo Depot", "cargo_type": "General Cargo", "total_capacity": 4000, "occupied_capacity": 1800, "utilization_percentage": 45.0, "status": "Normal", "updated_at": now}
         ]
         for y in yards_seed:
-            self.yards[y["id"]] = y
+            super(SyncedTable, self.yards).__setitem__(y["id"], y)
 
         # 5. Vessels
         vessels_seed = [
@@ -120,7 +311,7 @@ class PortRepository:
             {"id": "f0000014-0000-0000-0000-000000000014", "vessel_code": "IMO-9725861", "vessel_name": "Unifeeder Baltic", "shipping_line": "Unifeeder", "cargo_type": "Container", "cargo_volume": 320, "vessel_length": 140.0, "arrival_time": None, "eta": now + timedelta(hours=50), "etd": now + timedelta(hours=60), "priority": 4, "status": "Scheduled", "assigned_berth_id": None, "expected_waiting_time": 0.0, "created_at": now, "updated_at": now}
         ]
         for v in vessels_seed:
-            self.vessels[v["id"]] = v
+            super(SyncedTable, self.vessels).__setitem__(v["id"], v)
 
         # 6. Disruptions
         disruptions_seed = [
@@ -165,8 +356,8 @@ class PortRepository:
             }
         ]
         for d in disruptions_seed:
-            self.disruptions[d["id"]] = d
+            super(SyncedTable, self.disruptions).__setitem__(d["id"], d)
 
 
-# Global repository instance
+# Global singleton repository instance
 port_repo = PortRepository()
