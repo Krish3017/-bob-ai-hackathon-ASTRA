@@ -29,8 +29,13 @@ def trigger_optimization_run(
 
     # Store in memory repository
     port_repo.optimization_runs[run_id] = run_result
+    schedules_data = []
     for item in run_result["schedules"]:
-        port_repo.schedules[item.id] = item.model_dump()
+        item_dict = item.model_dump()
+        dict.__setitem__(port_repo.schedules, item.id, item_dict)
+        schedules_data.append(item_dict)
+
+    port_repo.persist_items_batch("schedules", schedules_data)
 
     return OptimizationRunResponse(**run_result)
 
@@ -58,8 +63,12 @@ def get_latest_optimization_run(current_user: UserResponse = Depends(get_current
         run_result = optimizer.solve()
         run_id = run_result["id"]
         port_repo.optimization_runs[run_id] = run_result
+        schedules_data = []
         for item in run_result["schedules"]:
-            port_repo.schedules[item.id] = item.model_dump()
+            item_dict = item.model_dump()
+            dict.__setitem__(port_repo.schedules, item.id, item_dict)
+            schedules_data.append(item_dict)
+        port_repo.persist_items_batch("schedules", schedules_data)
         return OptimizationRunResponse(**run_result)
 
     runs = list(port_repo.optimization_runs.values())

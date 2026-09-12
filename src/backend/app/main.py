@@ -27,6 +27,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    import logging
+    from fastapi.responses import JSONResponse
+    logging.getLogger("naviops").error(f"Unhandled error: {exc}", exc_info=True)
+    origin = request.headers.get("origin")
+    res = JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal Server Error: {str(exc)}"}
+    )
+    if origin and origin in allowed_origins:
+        res.headers["Access-Control-Allow-Origin"] = origin
+        res.headers["Access-Control-Allow-Credentials"] = "true"
+    return res
+
 # Include API routers
 app.include_router(auth.router)
 app.include_router(dashboard.router)

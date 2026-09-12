@@ -98,7 +98,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
 
   const adminNavItems: NavItem[] = [
     {
-      name: "Personnel & Access",
+      name: "Users",
       href: "/users",
       icon: Users,
       roles: ["admin"],

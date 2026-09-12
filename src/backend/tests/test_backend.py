@@ -102,8 +102,22 @@ def test_rbac_restrictions():
     assert res_apply.status_code == 403
 
     # 4. Admin can delete a vessel
+    created_v = client.post("/api/vessels", json={
+        "vessel_code": "V-DEL-01",
+        "vessel_name": "Test Delete Vessel",
+        "shipping_line": "Maersk",
+        "cargo_type": "Container",
+        "cargo_volume": 1000,
+        "vessel_length": 200.0,
+        "eta": "2026-09-15T00:00:00Z",
+        "etd": "2026-09-16T00:00:00Z",
+        "priority": 2
+    }, headers={"Authorization": f"Bearer {admin_token}"})
+    assert created_v.status_code == 201
+    v_id = created_v.json()["id"]
+
     res_admin_delete = client.delete(
-        "/api/vessels/f0000014-0000-0000-0000-000000000014",
+        f"/api/vessels/{v_id}",
         headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert res_admin_delete.status_code == 204
