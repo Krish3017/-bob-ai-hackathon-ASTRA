@@ -199,7 +199,7 @@ export const api = {
 
   // Copilot
   copilotChat: (message: string, history?: Array<{ role: string; content: string }>, sessionId?: string) =>
-    fetchWithAuth<{ reply: string; session_id?: string; model: string; role_context: string }>("/api/copilot/chat", {
+    fetchWithAuth<{ reply: string; session_id?: string; model: string; role_context: string; tools_used?: string[] | null }>("/api/copilot/chat", {
       method: "POST",
       body: JSON.stringify({ message, history: history ?? [], session_id: sessionId }),
     }),

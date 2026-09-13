@@ -51,7 +51,7 @@ def copilot_chat(
         return execute_tool(tool_name, arguments, current_user)
 
     try:
-        reply = copilot_service.chat(
+        reply, tools_used = copilot_service.chat(
             user_message=payload.message.strip(),
             history=history,
             user_role=current_user.role,
@@ -80,6 +80,7 @@ def copilot_chat(
         session_id=payload.session_id,
         model=settings.GROQ_MODEL,
         role_context=current_user.role,
+        tools_used=tools_used if tools_used else None,
     )
 
 

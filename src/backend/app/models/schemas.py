@@ -312,6 +312,7 @@ class CopilotChatResponse(BaseModel):
     session_id: Optional[str] = None
     model: str
     role_context: str
+    tools_used: Optional[List[str]] = Field(default=None, description="Internal tool names that were called during this request")
 
 
 class CopilotActionResponse(BaseModel):

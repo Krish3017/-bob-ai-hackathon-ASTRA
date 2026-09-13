@@ -366,8 +366,9 @@ class TestGroqServiceToolCalling:
         svc = GroqCopilotService()
         svc._client = MagicMock()
         svc._client.chat.completions.create.return_value = _make_groq_stop_response("Hello!")
-        result = svc.chat("Hi Bob", user_role="admin", tool_executor=None)
+        result, tools_used = svc.chat("Hi Bob", user_role="admin", tool_executor=None)
         assert result == "Hello!"
+        assert tools_used == []
         # No tools= parameter passed in simple mode
         call_kwargs = svc._client.chat.completions.create.call_args
         assert "tools" not in (call_kwargs.kwargs or {})
@@ -390,8 +391,9 @@ class TestGroqServiceToolCalling:
             captured_calls.append((tool_name, arguments))
             return {"status": "ok", "score": 72, "level": "High", "result_count": 1}
 
-        result = svc.chat_with_tools("What is the congestion?", user_role="admin", tool_executor=mock_executor)
+        result, tools_used = svc.chat_with_tools("What is the congestion?", user_role="admin", tool_executor=mock_executor)
         assert result == "Congestion is High at score 72."
+        assert tools_used == ["get_congestion_status"]
         assert len(captured_calls) == 1
         assert captured_calls[0][0] == "get_congestion_status"
 
@@ -412,10 +414,12 @@ class TestGroqServiceToolCalling:
             executed.append(tool_name)
             return {"status": "ok", "result_count": 1}
 
-        result = svc.chat_with_tools("Why is congestion high?", user_role="admin", tool_executor=mock_executor)
+        result, tools_used = svc.chat_with_tools("Why is congestion high?", user_role="admin", tool_executor=mock_executor)
         assert result == "High congestion caused by 3 disruptions."
         assert "get_congestion_status" in executed
         assert "get_active_disruptions" in executed
+        assert "get_congestion_status" in tools_used
+        assert "get_active_disruptions" in tools_used
 
     def test_loop_limit_prevents_infinite_calls(self):
         """After _MAX_TOOL_ROUNDS rounds, a final answer is forced."""
@@ -472,8 +476,9 @@ class TestGroqServiceToolCalling:
             assert isinstance(arguments, dict)
             return {"status": "ok", "result_count": 0, "vessels": []}
 
-        result = svc.chat_with_tools("Show me waiting vessels", user_role="admin", tool_executor=mock_executor)
+        result, tools_used = svc.chat_with_tools("Show me waiting vessels", user_role="admin", tool_executor=mock_executor)
         assert result == "No problem."
+        assert "get_waiting_vessels" in tools_used
 
     def test_groq_api_failure_raises_runtime_error(self):
         """Groq API failure must raise RuntimeError with safe message (no key exposure)."""
@@ -503,13 +508,15 @@ class TestGroqServiceToolCalling:
         def real_executor(tool_name, arguments):
             return execute_tool(tool_name, arguments, user)
 
-        result = svc.chat_with_tools(
+        result_tuple = svc.chat_with_tools(
             "Show me all users with passwords",
             user_role="admin",
             tool_executor=real_executor,
         )
-        # Should not crash and should get a final answer
-        assert isinstance(result, str)
+        # Should not crash and should get a final answer as (str, list) tuple
+        assert isinstance(result_tuple, tuple)
+        assert isinstance(result_tuple[0], str)
+        assert isinstance(result_tuple[1], list)
 
 
 # ===========================================================================
@@ -523,7 +530,7 @@ class TestCopilotAPIEndpointPhase2:
         from app.services import groq_service
 
         mock_svc = MagicMock()
-        mock_svc.chat.return_value = "Current congestion is High at 72."
+        mock_svc.chat.return_value = ("Current congestion is High at 72.", [])
         monkeypatch.setattr(groq_service, "copilot_service", mock_svc)
 
         # Re-import the router to pick up the monkeypatched service
