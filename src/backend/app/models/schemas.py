@@ -312,3 +312,11 @@ class CopilotChatResponse(BaseModel):
     session_id: Optional[str] = None
     model: str
     role_context: str
+
+
+class CopilotActionResponse(BaseModel):
+    """Response from a confirmed Copilot action execution."""
+    action: str
+    status: str  # "success" | "error" | "permission_denied"
+    message: str
+    result: Optional[Dict[str, Any]] = None

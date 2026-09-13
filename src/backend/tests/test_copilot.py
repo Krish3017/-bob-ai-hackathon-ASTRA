@@ -89,7 +89,7 @@ def test_copilot_status_shape():
     assert data["status"] in ("ready", "unconfigured")
     assert "model" in data
     assert "phase" in data
-    assert data["phase"] == "2"
+    assert data["phase"] in ("2", "3")
 
 
 # ---------------------------------------------------------------------------

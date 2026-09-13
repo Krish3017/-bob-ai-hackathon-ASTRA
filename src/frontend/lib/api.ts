@@ -204,7 +204,11 @@ export const api = {
       body: JSON.stringify({ message, history: history ?? [], session_id: sessionId }),
     }),
   copilotStatus: () =>
-    fetchWithAuth<{ copilot: string; phase: string; configured: boolean; model: string | null; status: string }>("/api/copilot/status"),
+    fetchWithAuth<{ copilot: string; phase: string; configured: boolean; model: string | null; status: string; tools_available: string[]; actions_available: string[] }>("/api/copilot/status"),
+  copilotRunOptimization: () =>
+    fetchWithAuth<{ action: string; status: string; message: string; result: Record<string, unknown> | null }>("/api/copilot/action/run-optimization", {
+      method: "POST",
+    }),
 
   // Auth & Personnel Directory
   login: (email: string, password?: string, role?: string) =>
