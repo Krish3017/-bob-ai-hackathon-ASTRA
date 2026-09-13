@@ -25,6 +25,8 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/design-system/toast";
+import { useConfirm } from "@/components/design-system/confirm-dialog";
 
 export default function OperationsPage() {
   const [vessels, setVessels] = useState<Vessel[]>([]);
@@ -32,6 +34,8 @@ export default function OperationsPage() {
   const [cranes, setCranes] = useState<Crane[]>([]);
   const [currentRole, setCurrentRole] = useState<string>("operations");
   const [refreshing, setRefreshing] = useState(false);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   // Filter & Search
   const [searchQuery, setSearchQuery] = useState("");
@@ -82,13 +86,22 @@ export default function OperationsPage() {
   }, []);
 
   const handleDeleteVessel = async (id: string, name: string) => {
-    if (confirm(`Confirm deletion of vessel record: ${name}? (Admin only)`)) {
-      try {
-        await api.deleteVessel(id);
-        loadAll();
-      } catch (err: any) {
-        alert("Action restricted: " + err.message);
-      }
+    const confirmed = await confirm({
+      title: "Remove vessel?",
+      description: `This will permanently remove ${name} from the live port operations queue. This action cannot be undone.`,
+      confirmText: "Remove vessel",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await api.deleteVessel(id);
+      toast.success("Vessel removed", `${name} removed from operations queue.`);
+      loadAll();
+    } catch (err: any) {
+      toast.error("Unable to remove vessel", err.message || "Action restricted.");
     }
   };
 
@@ -250,17 +263,21 @@ export default function OperationsPage() {
                           <span className="text-[#899491] italic">Unassigned</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs font-mono font-medium text-[#5C6B68]">
-                        {v.expected_waiting_time > 0 ? (
-                          <span className="text-amber-700 font-semibold">
+                      <TableCell className="text-xs font-mono font-medium">
+                        {v.expected_waiting_time > 6 ? (
+                          <span className="text-[#B94A48] font-bold">
+                            +{formatDuration(v.expected_waiting_time)}
+                          </span>
+                        ) : v.expected_waiting_time > 0 ? (
+                          <span className="text-[#C58A2B] font-semibold">
                             +{formatDuration(v.expected_waiting_time)}
                           </span>
                         ) : (
-                          <span className="text-[#899491]">0h</span>
+                          <span className="text-[#2F7D5B] font-medium">0h (Direct)</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="status" status={v.status} size="sm">
+                        <Badge variant="status" status={v.status} context="vessel" size="sm">
                           {v.status}
                         </Badge>
                       </TableCell>

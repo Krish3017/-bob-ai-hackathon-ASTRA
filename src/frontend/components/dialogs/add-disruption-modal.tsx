@@ -6,6 +6,7 @@ import { Button } from "@/design-system/button";
 import { FormField, Input, Select, Textarea } from "@/design-system/form-field";
 import { api } from "@/lib/api";
 import { Berth, Crane } from "@/types";
+import { useToast } from "@/components/design-system/toast";
 
 interface AddDisruptionModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export function AddDisruptionModal({
   cranes,
 }: AddDisruptionModalProps) {
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
   const [formData, setFormData] = useState({
     disruption_type: "Equipment Failure",
     title: "",
@@ -34,16 +36,16 @@ export function AddDisruptionModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title) {
-      alert("Please provide an incident title");
+    if (!formData.title.trim()) {
+      toast.warning("Title required", "Please provide an incident title.");
       return;
     }
     setLoading(true);
     try {
       await api.createDisruption({
         disruption_type: formData.disruption_type,
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
         affected_resource_type: formData.affected_resource_type as any,
         affected_resource_id:
           formData.affected_resource_type === "port" ? null : formData.affected_resource_id,
@@ -51,10 +53,17 @@ export function AddDisruptionModal({
         status: "Active",
       });
 
+      toast.success(
+        "Disruption reported",
+        `${formData.title.trim()} logged to the operational incident register.`
+      );
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert("Failed to report disruption: " + err.message);
+      toast.error(
+        "Unable to report disruption",
+        err.message || "An unexpected error occurred."
+      );
     } finally {
       setLoading(false);
     }

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { api } from "@/lib/api";
 import { DashboardSummary, Berth, Vessel } from "@/types";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, getCongestionMeta, getResourceUtilizationMeta } from "@/lib/utils";
 import {
   Ship,
   Anchor,
@@ -117,31 +117,30 @@ export default function DashboardPage() {
     });
   }
 
-  // Congestion score color helpers
-  const scoreCardBg =
-    congestion?.level === "Critical"
-      ? "bg-[#B94A48]"
-      : congestion?.level === "High"
-      ? "bg-[#C58A2B]"
-      : congestion?.level === "Low"
-      ? "bg-[#2F7D5B]"
-      : "bg-[#004741]";
+  // Congestion score semantic metadata (strict 5-tier dynamic system)
+  const congestionMeta = getCongestionMeta(congestion?.score ?? 45);
 
-  const scoreTextColor =
-    congestion?.level === "Critical"
-      ? "text-[#B94A48]"
-      : congestion?.level === "High"
-      ? "text-[#C58A2B]"
-      : congestion?.level === "Low"
-      ? "text-[#2F7D5B]"
-      : "text-[#004741]";
+  // Resource utilization semantic helpers
+  const waitingCount = metrics?.waiting_at_anchorage ?? 0;
+  const waitingColor =
+    waitingCount >= 7
+      ? { border: "border-l-[#B94A48]", iconBg: "bg-[#FCE9E8]", iconColor: "text-[#B94A48]", text: "text-[#B94A48]" }
+      : waitingCount >= 4
+      ? { border: "border-l-[#C58A2B]", iconBg: "bg-[#FFF4DE]", iconColor: "text-[#C58A2B]", text: "text-[#C58A2B]" }
+      : waitingCount >= 1
+      ? { border: "border-l-[#2F7D8C]", iconBg: "bg-[#E1F0F2]", iconColor: "text-[#2F7D8C]", text: "text-[#2F7D8C]" }
+      : { border: "border-l-[#2F7D5B]", iconBg: "bg-[#E5F2EA]", iconColor: "text-[#2F7D5B]", text: "text-[#2F7D5B]" };
+
+  const berthUtilMeta = getResourceUtilizationMeta(metrics?.berth_utilization_rate ?? 0);
+  const craneUtilMeta = getResourceUtilizationMeta(metrics?.crane_utilization_rate ?? 0);
+  const yardUtilMeta = getResourceUtilizationMeta(metrics?.yard_utilization_rate ?? 0);
 
   return (
     <AppShell
       title="Port Operations Dashboard"
       description="Monitor real-time congestion, identify operational bottlenecks, and take targeted action."
       congestionScore={congestion?.score || 45}
-      congestionLevel={congestion?.level || "Moderate"}
+      congestionLevel={congestionMeta.label}
       onRefresh={loadData}
       isRefreshing={refreshing}
     >
@@ -152,8 +151,8 @@ export default function DashboardPage() {
             {/* Score badge */}
             <div
               className={cn(
-                "flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl font-bold text-white shadow-sm",
-                scoreCardBg
+                "flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl font-bold text-white shadow-sm transition-colors",
+                congestionMeta.cardBgClass
               )}
             >
               <span className="text-xl leading-none">{congestion?.score ?? 0}</span>
@@ -162,14 +161,14 @@ export default function DashboardPage() {
 
             <div>
               <div className="flex items-center gap-2">
-                <span className={cn("text-xs font-bold uppercase tracking-wider", scoreTextColor)}>
-                  {congestion?.level || "Moderate"} Congestion
+                <span className={cn("text-xs font-bold uppercase tracking-wider", congestionMeta.textColor)}>
+                  {congestionMeta.label} Congestion
                 </span>
                 <span className="text-[#D5D9D3]">·</span>
                 <span className="text-xs text-[#5C6B68]">Port Index Status</span>
               </div>
               <h2 className="text-base font-semibold text-[#102A27] mt-0.5">
-                {congestion?.explanation || "Quayside and anchorage operational diagnostic summary."}
+                {congestion?.explanation || congestionMeta.summary}
               </h2>
             </div>
           </div>
@@ -230,7 +229,18 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-center justify-between font-medium">
                         <span className="text-[#102A27]">{friendlyName}</span>
-                        <span className="font-mono text-[#004741] font-semibold">
+                        <span
+                          className={cn(
+                            "font-mono font-semibold",
+                            f.score_contribution >= 15
+                              ? "text-[#B94A48]"
+                              : f.score_contribution >= 8
+                              ? "text-[#C25E00]"
+                              : f.score_contribution >= 4
+                              ? "text-[#C58A2B]"
+                              : "text-[#2F7D8C]"
+                          )}
+                        >
                           +{f.score_contribution} pts
                         </span>
                       </div>
@@ -254,18 +264,18 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* 2. Four Frosted Glass KPI Cards */}
+      {/* 2. Four Frosted Glass KPI Cards with Semantic Accents */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Vessels Waiting */}
-        <div className="rounded-xl border border-white/80 bg-white/60 backdrop-blur-md p-4 shadow-card hover:shadow-card-hover transition-all border-l-4 border-l-[#004741]">
+        <div className={cn("rounded-xl border border-white/80 bg-white/60 backdrop-blur-md p-4 shadow-card hover:shadow-card-hover transition-all border-l-4", waitingColor.border)}>
           <div className="flex items-center justify-between text-xs text-[#5C6B68]">
             <span className="font-medium uppercase tracking-wider text-[10px]">Vessels Waiting</span>
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E1EFEC]/90 shadow-sm">
-              <Ship className="h-3.5 w-3.5 text-[#004741]" />
+            <div className={cn("flex h-7 w-7 items-center justify-center rounded-lg shadow-sm", waitingColor.iconBg)}>
+              <Ship className={cn("h-3.5 w-3.5", waitingColor.iconColor)} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#004741] drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+            <span className={cn("text-2xl font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]", waitingColor.text)}>
               {metrics?.waiting_at_anchorage ?? "—"}
             </span>
             <span className="text-xs text-[#5C6B68] font-medium">in queue</span>
@@ -277,7 +287,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Berth Utilization */}
-        <div className="rounded-xl border border-white/80 bg-white/60 backdrop-blur-md p-4 shadow-card hover:shadow-card-hover transition-all border-l-4 border-l-[#2F7D8C]">
+        <div className={cn("rounded-xl border border-white/80 bg-white/60 backdrop-blur-md p-4 shadow-card hover:shadow-card-hover transition-all border-l-4", berthUtilMeta.borderClass)}>
           <div className="flex items-center justify-between text-xs text-[#5C6B68]">
             <span className="font-medium uppercase tracking-wider text-[10px]">Berth Utilization</span>
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E1F0F2]/90 shadow-sm">
@@ -285,7 +295,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#2F7D8C] drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+            <span className={cn("text-2xl font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]", berthUtilMeta.textClass)}>
               {metrics?.berth_utilization_rate ?? "—"}%
             </span>
             <span className="text-xs text-[#5C6B68] font-medium">occupied</span>
@@ -297,7 +307,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Crane Availability */}
-        <div className="rounded-xl border border-white/80 bg-white/60 backdrop-blur-md p-4 shadow-card hover:shadow-card-hover transition-all border-l-4 border-l-[#C58A2B]">
+        <div className={cn("rounded-xl border border-white/80 bg-white/60 backdrop-blur-md p-4 shadow-card hover:shadow-card-hover transition-all border-l-4", (summary?.failed_cranes || 0) > 0 ? "border-l-[#B94A48]" : craneUtilMeta.borderClass)}>
           <div className="flex items-center justify-between text-xs text-[#5C6B68]">
             <span className="font-medium uppercase tracking-wider text-[10px]">Crane Availability</span>
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FFF4DE]/90 shadow-sm">
@@ -305,7 +315,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#C58A2B] drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+            <span className={cn("text-2xl font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]", (summary?.failed_cranes || 0) > 0 ? "text-[#B94A48]" : craneUtilMeta.textClass)}>
               {metrics?.crane_utilization_rate ?? "—"}%
             </span>
             <span className="text-xs text-[#5C6B68] font-medium">active</span>
@@ -319,7 +329,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Yard Capacity */}
-        <div className="rounded-xl border border-white/80 bg-white/60 backdrop-blur-md p-4 shadow-card hover:shadow-card-hover transition-all border-l-4 border-l-[#2F7D5B]">
+        <div className={cn("rounded-xl border border-white/80 bg-white/60 backdrop-blur-md p-4 shadow-card hover:shadow-card-hover transition-all border-l-4", yardUtilMeta.borderClass)}>
           <div className="flex items-center justify-between text-xs text-[#5C6B68]">
             <span className="font-medium uppercase tracking-wider text-[10px]">Yard Capacity</span>
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#E5F2EA]/90 shadow-sm">
@@ -327,7 +337,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#2F7D5B] drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]">
+            <span className={cn("text-2xl font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.9)]", yardUtilMeta.textClass)}>
               {metrics?.yard_utilization_rate ?? "—"}%
             </span>
             <span className="text-xs text-[#5C6B68] font-medium">utilized</span>

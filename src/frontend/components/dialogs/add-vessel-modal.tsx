@@ -6,6 +6,7 @@ import { Button } from "@/design-system/button";
 import { FormField, Input, Select } from "@/design-system/form-field";
 import { api } from "@/lib/api";
 import { Vessel } from "@/types";
+import { useToast } from "@/components/design-system/toast";
 
 interface AddVesselModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface AddVesselModalProps {
 
 export function AddVesselModal({ isOpen, onClose, onSuccess }: AddVesselModalProps) {
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
   const [formData, setFormData] = useState({
     vessel_code: `IMO-${Math.floor(1000000 + Math.random() * 9000000)}`,
     vessel_name: "",
@@ -29,8 +31,8 @@ export function AddVesselModal({ isOpen, onClose, onSuccess }: AddVesselModalPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.vessel_name) {
-      alert("Please specify vessel name");
+    if (!formData.vessel_name.trim()) {
+      toast.warning("Vessel name required", "Please specify a name for the incoming vessel.");
       return;
     }
     setLoading(true);
@@ -41,7 +43,7 @@ export function AddVesselModal({ isOpen, onClose, onSuccess }: AddVesselModalPro
 
       await api.createVessel({
         vessel_code: formData.vessel_code,
-        vessel_name: formData.vessel_name,
+        vessel_name: formData.vessel_name.trim(),
         shipping_line: formData.shipping_line,
         cargo_type: formData.cargo_type,
         cargo_volume: Number(formData.cargo_volume),
@@ -53,10 +55,17 @@ export function AddVesselModal({ isOpen, onClose, onSuccess }: AddVesselModalPro
         expected_waiting_time: 2.0,
       });
 
+      toast.success(
+        "Vessel registered",
+        `${formData.vessel_name.trim()} added to the quayside scheduling queue.`
+      );
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert("Failed to create vessel: " + err.message);
+      toast.error(
+        "Unable to register vessel",
+        err.message || "An unexpected error occurred."
+      );
     } finally {
       setLoading(false);
     }

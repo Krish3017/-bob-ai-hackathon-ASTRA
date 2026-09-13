@@ -87,7 +87,7 @@ export default function CranesPage() {
                       {assignedBerth ? assignedBerth.berth_code : "Unassigned Rail"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="status" status={c.status}>
+                      <Badge variant="status" status={c.status} context="crane">
                         {c.status}
                       </Badge>
                     </TableCell>

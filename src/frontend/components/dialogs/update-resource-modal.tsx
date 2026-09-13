@@ -5,6 +5,8 @@ import { Modal } from "@/design-system/modal";
 import { Button } from "@/design-system/button";
 import { FormField, Input, Select } from "@/design-system/form-field";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/design-system/toast";
+import { useConfirm } from "@/components/design-system/confirm-dialog";
 
 interface UpdateResourceModalProps {
   isOpen: boolean;
@@ -30,11 +32,32 @@ export function UpdateResourceModal({
   const [expectedWait, setExpectedWait] = useState<number>(
     resource?.expected_waiting_time || 0
   );
+  const toast = useToast();
+  const confirm = useConfirm();
 
   if (!resource) return null;
 
+  const resourceName =
+    resource.vessel_name || resource.berth_code || resource.crane_code || resource.yard_code || "Resource";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (
+      (resourceType === "berth" || resourceType === "crane") &&
+      (status === "Under Maintenance" || status === "Maintenance" || status === "Offline") &&
+      resource.status !== status
+    ) {
+      const confirmed = await confirm({
+        title: `Mark ${resourceName} offline?`,
+        description: `Changing status to "${status}" will remove this resource from automated scheduling and operational allocation. Continue?`,
+        confirmText: "Mark offline",
+        cancelText: "Cancel",
+        variant: "warning",
+      });
+      if (!confirmed) return;
+    }
+
     setLoading(true);
     try {
       if (resourceType === "vessel") {
@@ -56,10 +79,18 @@ export function UpdateResourceModal({
           occupied_capacity: Number(occupiedCapacity),
         });
       }
+
+      toast.success(
+        "Resource updated",
+        `${resourceName} details updated successfully.`
+      );
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert("Failed to update resource: " + err.message);
+      toast.error(
+        "Failed to update resource",
+        err.message || "An unexpected error occurred."
+      );
     } finally {
       setLoading(false);
     }

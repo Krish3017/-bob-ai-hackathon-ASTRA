@@ -10,6 +10,8 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@
 import { api } from "@/lib/api";
 import { User, UserRole } from "@/types";
 import Link from "next/link";
+import { useToast } from "@/components/design-system/toast";
+import { useConfirm } from "@/components/design-system/confirm-dialog";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -19,6 +21,8 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [updateStatus, setUpdateStatus] = useState<{ [userId: string]: string }>({});
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const fetchUsersData = async () => {
     setIsLoading(true);
@@ -42,11 +46,26 @@ export default function UsersPage() {
   }, []);
 
   const handleRoleUpdate = async (userId: string, newRole: string) => {
+    const userToUpdate = users.find((u) => u.id === userId);
+    const confirmed = await confirm({
+      title: "Change user access role?",
+      description: `Are you sure you want to change ${userToUpdate?.full_name || "this user"}'s permissions to ${newRole.toUpperCase()}? This takes effect immediately.`,
+      confirmText: "Update role",
+      cancelText: "Cancel",
+      variant: "warning",
+    });
+
+    if (!confirmed) return;
+
     setUpdateStatus((prev) => ({ ...prev, [userId]: "saving" }));
     try {
       const updated = await api.updateUserRole(userId, newRole);
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: updated.role } : u)));
       setUpdateStatus((prev) => ({ ...prev, [userId]: "saved" }));
+      toast.success(
+        "User role updated",
+        `${userToUpdate?.full_name || "User"}'s role changed to ${newRole}.`
+      );
       setTimeout(() => {
         setUpdateStatus((prev) => {
           const next = { ...prev };
@@ -69,7 +88,7 @@ export default function UsersPage() {
         }
       }
     } catch (err: any) {
-      alert("Failed to update role: " + err.message);
+      toast.error("Failed to update role", err.message || "Action restricted.");
       setUpdateStatus((prev) => ({ ...prev, [userId]: "error" }));
     }
   };
@@ -125,23 +144,23 @@ export default function UsersPage() {
 
             <div className="rounded-lg border border-[#E3E5E0] bg-white p-4 shadow-card">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#2F7D8C] uppercase tracking-wider">
                   Operations Staff
                 </span>
-                <UserCheck className="h-4 w-4 text-emerald-600" />
+                <UserCheck className="h-4 w-4 text-[#2F7D8C]" />
               </div>
-              <div className="mt-2 text-2xl font-bold text-emerald-700">{opsCount}</div>
+              <div className="mt-2 text-2xl font-bold text-[#2F7D8C]">{opsCount}</div>
               <div className="text-[11px] text-[#5C6B68] mt-0.5">Control center & Solver run</div>
             </div>
 
             <div className="rounded-lg border border-[#E3E5E0] bg-white p-4 shadow-card">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#5C6B68] uppercase tracking-wider">
                   Viewers (Read-Only)
                 </span>
-                <Eye className="h-4 w-4 text-amber-600" />
+                <Eye className="h-4 w-4 text-[#5C6B68]" />
               </div>
-              <div className="mt-2 text-2xl font-bold text-amber-700">{viewerCount}</div>
+              <div className="mt-2 text-2xl font-bold text-[#5C6B68]">{viewerCount}</div>
               <div className="text-[11px] text-[#5C6B68] mt-0.5">Executive & Stakeholder view</div>
             </div>
           </div>
@@ -240,25 +259,24 @@ export default function UsersPage() {
 
                             <TableCell>
                               {user.role === "admin" && (
-                                <Badge variant="status" status="Available" size="sm" className="gap-1 font-semibold">
+                                <Badge variant="role" role="admin" size="sm" className="gap-1 font-semibold">
                                   <ShieldCheck className="h-3 w-3 text-[#004741]" />
                                   Port Manager (Admin)
                                 </Badge>
                               )}
                               {user.role === "operations" && (
-                                <Badge variant="status" status="Normal" size="sm" className="gap-1 font-semibold">
-                                  <UserCheck className="h-3 w-3 text-emerald-600" />
+                                <Badge variant="role" role="operations" size="sm" className="gap-1 font-semibold">
+                                  <UserCheck className="h-3 w-3 text-[#2F7D8C]" />
                                   Operations Staff
                                 </Badge>
                               )}
                               {user.role === "viewer" && (
-                                <Badge variant="status" status="Near Capacity" size="sm" className="gap-1 font-semibold">
-                                  <Eye className="h-3 w-3 text-amber-600" />
+                                <Badge variant="role" role="viewer" size="sm" className="gap-1 font-medium">
+                                  <Eye className="h-3 w-3 text-[#5C6B68]" />
                                   Viewer (Read-Only)
                                 </Badge>
                               )}
                             </TableCell>
-
 
                             <TableCell>
                               <div className="flex items-center gap-2">
@@ -286,9 +304,9 @@ export default function UsersPage() {
                             </TableCell>
 
                             <TableCell className="text-right">
-                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
+                              <Badge variant="status" status="Active" context="user" size="sm">
                                 Active
-                              </span>
+                              </Badge>
                             </TableCell>
                           </TableRow>
                         );

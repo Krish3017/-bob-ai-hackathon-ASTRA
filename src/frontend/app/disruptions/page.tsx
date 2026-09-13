@@ -11,6 +11,8 @@ import { api } from "@/lib/api";
 import { Disruption, Berth, Crane } from "@/types";
 import { formatDateTime } from "@/lib/utils";
 import { AlertTriangle, Plus, CheckCircle, Trash2 } from "lucide-react";
+import { useToast } from "@/components/design-system/toast";
+import { useConfirm } from "@/components/design-system/confirm-dialog";
 
 export default function DisruptionsPage() {
   const [disruptions, setDisruptions] = useState<Disruption[]>([]);
@@ -18,6 +20,8 @@ export default function DisruptionsPage() {
   const [cranes, setCranes] = useState<Crane[]>([]);
   const [currentRole, setCurrentRole] = useState<string>("viewer");
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const loadAll = async () => {
     if (typeof window !== "undefined") {
@@ -48,22 +52,53 @@ export default function DisruptionsPage() {
   }, []);
 
   const handleResolve = async (id: string) => {
+    const confirmed = await confirm({
+      title: "Resolve disruption?",
+      description:
+        "This will mark the disruption incident as resolved and return affected resources to normal operational scheduling.",
+      confirmText: "Resolve incident",
+      cancelText: "Cancel",
+      variant: "default",
+    });
+
+    if (!confirmed) return;
+
     try {
       await api.updateDisruption(id, { status: "Resolved" });
+      toast.success(
+        "Disruption resolved",
+        "Incident closed and resources restored to operational queue."
+      );
       loadAll();
     } catch (err: any) {
-      alert("Failed to resolve disruption: " + err.message);
+      toast.error(
+        "Unable to resolve disruption",
+        err.message || "An unexpected error occurred."
+      );
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Delete this disruption record? (Admin only)")) {
-      try {
-        await api.deleteDisruption(id);
-        loadAll();
-      } catch (err: any) {
-        alert("Action restricted: " + err.message);
-      }
+    const confirmed = await confirm({
+      title: "Delete disruption record?",
+      description:
+        "This will permanently remove this incident record and associated event history. This action cannot be undone.",
+      confirmText: "Delete incident",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await api.deleteDisruption(id);
+      toast.success("Disruption deleted", "Incident record removed.");
+      loadAll();
+    } catch (err: any) {
+      toast.error(
+        "Unable to delete disruption",
+        err.message || "Action restricted."
+      );
     }
   };
 
@@ -128,13 +163,13 @@ export default function DisruptionsPage() {
                       {d.affected_resource_type}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="status" status={d.severity}>
+                      <Badge variant="status" status={d.severity} context="disruption">
                         {d.severity}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs text-[#5C6B68]">{formatDateTime(d.start_time)}</TableCell>
                     <TableCell>
-                      <Badge variant="status" status={d.status}>
+                      <Badge variant="status" status={d.status} context="disruption">
                         {d.status}
                       </Badge>
                     </TableCell>

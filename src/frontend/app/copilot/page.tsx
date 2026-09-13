@@ -25,6 +25,8 @@ import {
   HistoryIcon,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/design-system/toast";
+import { useConfirm } from "@/components/design-system/confirm-dialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -596,6 +598,8 @@ export default function CopilotPage() {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<"run_optimization" | null>(null);
   const [toolSteps, setToolSteps] = useState<ToolStep[]>([]);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   // Conversation persistence state
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -611,8 +615,15 @@ export default function CopilotPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, toolSteps]);
 
-  const addMessage = useCallback((msg: Omit<Message, "id" | "time"> & { time?: string }) => {
-    setMessages((prev) => [...prev, { id: uid(), time: nowUTC(), ...msg }]);
+  // Append a message helper
+  const addMessage = useCallback((msg: Omit<Message, "id" | "time"> & { id?: string; time?: string }) => {
+    const full: Message = {
+      id: msg.id ?? `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      time: msg.time ?? nowUTC(),
+      ...msg,
+    };
+    setMessages((prev) => [...prev, full]);
+    return full.id;
   }, []);
 
   // Tool progress helpers
@@ -652,9 +663,10 @@ export default function CopilotPage() {
       setMessages(loaded);
     } catch {
       addMessage({ kind: "error", text: "Could not load conversation history. Chat still works." });
+      toast.warning("Conversation history", "Could not load prior messages from storage.");
     }
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, [addMessage]);
+  }, [addMessage, toast]);
 
   // Start a fresh conversation
   const handleNewConversation = useCallback(() => {
@@ -665,8 +677,9 @@ export default function CopilotPage() {
     }
     setToolSteps([]);
     setPendingAction(null);
+    toast.info("New conversation", "Started a fresh Bob AI Copilot session.");
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, []);
+  }, [toast]);
 
   // On mount: load conversation list, then restore the last active conversation or most recent one
   useEffect(() => {
@@ -711,8 +724,20 @@ export default function CopilotPage() {
 
   // Delete a conversation
   const handleDeleteConversation = useCallback(async (convId: string) => {
+    const target = conversations.find((c) => c.id === convId);
+    const confirmed = await confirm({
+      title: "Delete conversation?",
+      description: `This will permanently remove "${target?.title || "this conversation"}" and its saved chat messages. This action cannot be undone.`,
+      confirmText: "Delete conversation",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+
+    if (!confirmed) return;
+
     try {
       await api.deleteConversation(convId);
+      toast.success("Conversation deleted", "Chat history removed successfully.");
       const remaining = conversations.filter((c) => c.id !== convId);
       setConversations(remaining);
       if (activeConvId === convId) {
@@ -722,10 +747,13 @@ export default function CopilotPage() {
           handleNewConversation();
         }
       }
-    } catch {
-      // Silently fail — user can try again
+    } catch (err: any) {
+      toast.error(
+        "Unable to delete conversation",
+        err.message || "Failed to remove conversation."
+      );
     }
-  }, [activeConvId, conversations, handleNewConversation, loadConversation]);
+  }, [activeConvId, confirm, conversations, handleNewConversation, loadConversation, toast]);
 
   // Add conversation to list and put it at top
   const upsertConversationInList = useCallback((conv: ConversationSummary) => {

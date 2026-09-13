@@ -6,7 +6,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableEmp
 import { Badge } from "@/design-system/badge";
 import { api } from "@/lib/api";
 import { OptimizationRun, ScheduleItem, DashboardSummary, Berth, Vessel } from "@/types";
-import { formatDateTime, formatDuration } from "@/lib/utils";
+import { formatDateTime, formatDuration, getCongestionMeta } from "@/lib/utils";
 import {
   Zap,
   CheckCircle2,
@@ -23,6 +23,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/design-system/toast";
+import { useConfirm } from "@/components/design-system/confirm-dialog";
 
 export default function OptimizationPage() {
   const [run, setRun] = useState<OptimizationRun | null>(null);
@@ -35,6 +37,8 @@ export default function OptimizationPage() {
   const [isApplying, setIsApplying] = useState(false);
   const [applySuccess, setApplySuccess] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const loadData = async () => {
     if (typeof window !== "undefined") {
@@ -49,7 +53,6 @@ export default function OptimizationPage() {
       setSummary(sum);
       setBerths(bList);
       setVessels(vList);
-      // Latest run is optional — 404 simply means no run exists yet
       try {
         const latestRun = await api.getLatestOptimizationRun();
         setRun(latestRun);
@@ -57,10 +60,9 @@ export default function OptimizationPage() {
         if (runErr?.status !== 404) {
           console.error("Error loading latest optimization run:", runErr);
         }
-        // 404 is expected when no run exists yet — leave run as null
       }
     } catch (err) {
-      console.error("Error loading optimization data:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -72,7 +74,10 @@ export default function OptimizationPage() {
 
   const handleGeneratePlan = async () => {
     if (currentRole === "viewer") {
-      alert("Permission denied: Viewer role cannot trigger optimization runs.");
+      toast.error(
+        "Permission denied",
+        "Viewer role cannot trigger optimization runs. Admin or Operations role required."
+      );
       return;
     }
     setIsSolving(true);
@@ -82,8 +87,12 @@ export default function OptimizationPage() {
       setRun(newRun);
       const sum = await api.getDashboardSummary();
       setSummary(sum);
+      toast.success(
+        "Optimization completed",
+        "72-hour operational schedule generated with optimal berth allocations."
+      );
     } catch (err: any) {
-      alert("Optimization solver failed: " + err.message);
+      toast.error("Optimization solver failed", err.message || "Unable to solve.");
     } finally {
       setIsSolving(false);
     }
@@ -91,17 +100,39 @@ export default function OptimizationPage() {
 
   const handleApplyPlan = async () => {
     if (currentRole !== "admin") {
-      alert("Permission denied: Only Port Managers / Admins have authority to approve and apply schedules.");
+      toast.error(
+        "Permission denied",
+        "Only Port Managers / Admins have authority to approve and apply operational schedules."
+      );
       return;
     }
     if (!run) return;
+
+    const confirmed = await confirm({
+      title: "Apply optimization plan?",
+      description:
+        "This will update berth and resource assignments using the selected 72-hour optimization plan. Live operational allocations will be modified.",
+      confirmText: "Apply plan",
+      cancelText: "Cancel",
+      variant: "default",
+    });
+
+    if (!confirmed) return;
+
     setIsApplying(true);
     try {
       const res = await api.applySchedule(run.id);
       setApplySuccess(res.message);
       setRun({ ...run, applied: true });
+      toast.success(
+        "Optimization plan applied",
+        "Live berth allocations and vessel schedules have been updated."
+      );
     } catch (err: any) {
-      alert("Failed to apply schedule: " + err.message);
+      toast.error(
+        "Failed to apply schedule",
+        err.message || "An unexpected error occurred."
+      );
     } finally {
       setIsApplying(false);
     }
@@ -134,7 +165,7 @@ export default function OptimizationPage() {
       title="72-Hour Operational Schedule Optimizer"
       description="Mathematical combinatorial solver (Google OR-Tools CP-SAT) for berth allocations and crane dispatch."
       congestionScore={congestion?.score || 45}
-      congestionLevel={congestion?.level || "Moderate"}
+      congestionLevel={getCongestionMeta(congestion?.score || 45).label}
       onRefresh={loadData}
       isRefreshing={loading}
     >
@@ -317,15 +348,15 @@ export default function OptimizationPage() {
           {/* Priority Color Legend */}
           <div className="flex items-center gap-3 text-xs text-[#5C6B68]">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-rose-500" />
-              <span className="text-[11px]">Priority 1 (Urgent)</span>
+              <span className="h-2 w-2 rounded-full bg-[#B94A48]" />
+              <span className="text-[11px]">Priority 1 (Critical)</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              <span className="h-2 w-2 rounded-full bg-[#EA580C]" />
               <span className="text-[11px]">Priority 2 (High)</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#004741]" />
+              <span className="h-2 w-2 rounded-full bg-[#2F7D8C]" />
               <span className="text-[11px]">Standard Fleet</span>
             </span>
           </div>
@@ -393,10 +424,10 @@ export default function OptimizationPage() {
 
                       const blockColor =
                         priority === 1
-                          ? "bg-rose-600 hover:bg-rose-700 text-white border-rose-700"
+                          ? "bg-[#B94A48] hover:bg-[#9E3E3C] text-white border-[#B94A48]"
                           : priority === 2
-                          ? "bg-amber-600 hover:bg-amber-700 text-white border-amber-700"
-                          : "bg-[#004741] hover:bg-[#003B36] text-white border-[#004741]";
+                          ? "bg-[#EA580C] hover:bg-[#C2410C] text-white border-[#EA580C]"
+                          : "bg-[#2F7D8C] hover:bg-[#256B79] text-white border-[#2F7D8C]";
 
                       return (
                         <div
@@ -519,6 +550,7 @@ export default function OptimizationPage() {
                     <Badge
                       variant="status"
                       status={run?.applied ? "Applied" : item.status}
+                      context="optimization"
                       size="sm"
                     >
                       {run?.applied ? "Applied" : item.status}

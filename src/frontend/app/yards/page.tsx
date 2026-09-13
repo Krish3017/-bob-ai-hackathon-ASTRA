@@ -10,6 +10,7 @@ import { UpdateResourceModal } from "@/components/dialogs/update-resource-modal"
 import { api } from "@/lib/api";
 import { Yard } from "@/types";
 import { Boxes, Edit2, AlertCircle } from "lucide-react";
+import { getResourceUtilizationMeta } from "@/lib/utils";
 
 export default function YardsPage() {
   const [yards, setYards] = useState<Yard[]>([]);
@@ -46,8 +47,7 @@ export default function YardsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {yards.map((y) => {
           const util = y.utilization_percentage || 0;
-          const isHigh = util >= 85;
-          const barColor = util >= 90 ? "bg-rose-500" : util >= 75 ? "bg-amber-500" : "bg-[#004741]";
+          const utilMeta = getResourceUtilizationMeta(util);
 
           return (
             <Card key={y.id} className="border-[#E3E5E0]">
@@ -57,7 +57,7 @@ export default function YardsPage() {
                     <Boxes className="h-4 w-4 text-[#004741]" />
                     <span className="font-bold text-sm text-[#102A27]">{y.yard_code}</span>
                   </div>
-                  <Badge variant="status" status={y.status}>
+                  <Badge variant="status" status={y.status} context="yard">
                     {y.status}
                   </Badge>
                 </div>
@@ -67,12 +67,12 @@ export default function YardsPage() {
                 <div>
                   <div className="flex justify-between text-xs mb-1.5 font-medium">
                     <span className="text-[#5C6B68]">Utilization Rate:</span>
-                    <span className={isHigh ? "text-rose-600 font-bold" : "text-[#102A27] font-bold"}>
+                    <span className={utilMeta.textClass}>
                       {util}%
                     </span>
                   </div>
                   <div className="h-2.5 w-full rounded-full bg-[#F0EDE4] overflow-hidden">
-                    <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, util)}%` }} />
+                    <div className={`h-full rounded-full transition-all ${utilMeta.barClass}`} style={{ width: `${Math.min(100, util)}%` }} />
                   </div>
                 </div>
 

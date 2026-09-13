@@ -7,6 +7,8 @@ export const metadata: Metadata = {
     "Enterprise web-based port operations management platform with real-time congestion monitoring and 72-hour constraint optimization.",
 };
 
+import { AppProviders } from "@/components/providers/app-providers";
+
 export default function RootLayout({
   children,
 }: {
@@ -15,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className="h-full bg-[#FAFAF8] text-[#102A27] font-sans antialiased">
-        {children}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

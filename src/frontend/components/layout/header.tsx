@@ -5,6 +5,10 @@ import { RefreshCw, RotateCcw, LogOut, Shield, ChevronDown, Activity } from "luc
 import { api } from "@/lib/api";
 import { User } from "@/types";
 import { cn } from "@/lib/utils";
+import { getCongestionMeta } from "@/lib/semantic-colors";
+
+import { useToast } from "@/components/design-system/toast";
+import { useConfirm } from "@/components/design-system/confirm-dialog";
 
 interface HeaderProps {
   title: string;
@@ -30,19 +34,20 @@ export function Header({
   const [updatedTime, setUpdatedTime] = useState<string>("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
-    const now = new Date();
     setUpdatedTime(
-      now.toLocaleTimeString("en-US", {
-        hour12: false,
+      new Date().toLocaleTimeString("en-US", {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
       })
     );
-  }, [isRefreshing]);
+  }, []);
 
+  // Close profile on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
@@ -55,34 +60,41 @@ export function Header({
 
   const handleResetDemo = async () => {
     setIsProfileOpen(false);
-    if (confirm("Reset demo dataset back to initial state? (Admin only)")) {
-      try {
-        await api.resetDemoData();
-        if (onRefresh) onRefresh();
-      } catch (err: any) {
-        alert("Failed to reset demo: " + err.message);
-      }
+    const confirmed = await confirm({
+      title: "Reset demo dataset?",
+      description:
+        "This will restore all operational data, vessels, berths, cranes, and disruptions back to initial demo state. Any added records will be removed.",
+      confirmText: "Reset dataset",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await api.resetDemoData();
+      toast.success(
+        "Dataset reset",
+        "Operational telemetry and fleet records restored to initial demo state."
+      );
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      toast.error(
+        "Unable to reset dataset",
+        err.message || "An unexpected error occurred."
+      );
     }
   };
 
-  // Congestion pill styling using brand palette
-  const congestionPill =
-    congestionLevel === "Critical"
-      ? "bg-[#FCE9E8] text-[#B94A48] border-[#F2C4C3]"
-      : congestionLevel === "High"
-      ? "bg-[#FFF4DE] text-[#C58A2B] border-[#F0D49A]"
-      : congestionLevel === "Low"
-      ? "bg-[#E5F2EA] text-[#2F7D5B] border-[#A8D9BC]"
-      : "bg-[#E1EFEC] text-[#004741] border-[#C5DDD9]"; // Moderate → Cyprus teal
+  const handleRefreshClick = () => {
+    if (onRefresh) {
+      onRefresh();
+      toast.info("Refreshed", "Latest operational telemetry loaded.");
+    }
+  };
 
-  const congestionDot =
-    congestionLevel === "Critical"
-      ? "bg-[#B94A48]"
-      : congestionLevel === "High"
-      ? "bg-[#C58A2B]"
-      : congestionLevel === "Low"
-      ? "bg-[#2F7D5B]"
-      : "bg-[#004741]";
+  // Congestion pill styling using centralized semantic color system
+  const congestionMeta = getCongestionMeta(congestionScore);
 
   return (
     <header className="sticky top-0 z-20 flex h-14 w-full items-center justify-between border-b border-[#E3E5E0] bg-white/97 px-6 backdrop-blur-sm">
@@ -99,13 +111,13 @@ export function Header({
         {/* Congestion Pill */}
         <div
           className={cn(
-            "flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-            congestionPill
+            "flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium tracking-tight",
+            congestionMeta.badgeClass
           )}
         >
-          <span className={cn("h-1.5 w-1.5 rounded-full animate-pulse", congestionDot)} />
+          <span className={cn("h-1.5 w-1.5 rounded-full animate-pulse", congestionMeta.dotColor)} />
           <span>
-            {congestionLevel} · {congestionScore.toFixed(0)}/100
+            {congestionMeta.label} · {congestionScore.toFixed(0)}/100
           </span>
         </div>
 
@@ -119,7 +131,7 @@ export function Header({
         {onRefresh && (
           <button
             type="button"
-            onClick={onRefresh}
+            onClick={handleRefreshClick}
             disabled={isRefreshing}
             title="Refresh operational telemetry"
             className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E3E5E0] bg-white text-[#5C6B68] hover:bg-[#E1EFEC] hover:text-[#004741] hover:border-[#C5DDD9] transition-all disabled:opacity-50"

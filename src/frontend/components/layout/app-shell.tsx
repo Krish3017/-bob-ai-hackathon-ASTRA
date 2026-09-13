@@ -116,7 +116,6 @@ export function AppShell({
             : "flex flex-col pl-60 relative min-h-screen"
         }
       >
-        <MaritimeWatermark variant={watermarkVariant} />
         <Header
           title={title}
           description={description}

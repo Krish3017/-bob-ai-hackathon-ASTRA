@@ -84,7 +84,7 @@ export default function BerthsPage() {
                       {b.max_vessel_length} meters
                     </TableCell>
                     <TableCell>
-                      <Badge variant="status" status={b.status}>
+                      <Badge variant="status" status={b.status} context="berth">
                         {b.status}
                       </Badge>
                     </TableCell>

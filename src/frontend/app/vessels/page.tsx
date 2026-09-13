@@ -12,6 +12,8 @@ import { Vessel, Berth } from "@/types";
 import { formatDateTime, formatDuration } from "@/lib/utils";
 import { Ship, Plus, Edit2, Trash2, Anchor, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/design-system/toast";
+import { useConfirm } from "@/components/design-system/confirm-dialog";
 
 export default function VesselsPage() {
   const [vessels, setVessels] = useState<Vessel[]>([]);
@@ -25,6 +27,8 @@ export default function VesselsPage() {
     isOpen: false,
     vessel: null,
   });
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const loadVessels = async () => {
     if (typeof window !== "undefined") {
@@ -44,13 +48,22 @@ export default function VesselsPage() {
   }, []);
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Confirm deletion of vessel: ${name}? (Port Admin role required)`)) {
-      try {
-        await api.deleteVessel(id);
-        loadVessels();
-      } catch (err: any) {
-        alert("Action restricted: " + err.message);
-      }
+    const confirmed = await confirm({
+      title: "Delete vessel?",
+      description: `This will permanently remove ${name} from the fleet registry and queue. This action cannot be undone.`,
+      confirmText: "Delete vessel",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await api.deleteVessel(id);
+      toast.success("Vessel deleted", `${name} was removed from the fleet queue.`);
+      loadVessels();
+    } catch (err: any) {
+      toast.error("Unable to delete vessel", err.message || "Action restricted.");
     }
   };
 
@@ -189,7 +202,7 @@ export default function VesselsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="status" status={v.status} size="sm">
+                        <Badge variant="status" status={v.status} context="vessel" size="sm">
                           {v.status}
                         </Badge>
                       </TableCell>
