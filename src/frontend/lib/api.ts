@@ -197,6 +197,15 @@ export const api = {
       body: JSON.stringify({ run_id: runId }),
     }),
 
+  // Copilot
+  copilotChat: (message: string, history?: Array<{ role: string; content: string }>, sessionId?: string) =>
+    fetchWithAuth<{ reply: string; session_id?: string; model: string; role_context: string }>("/api/copilot/chat", {
+      method: "POST",
+      body: JSON.stringify({ message, history: history ?? [], session_id: sessionId }),
+    }),
+  copilotStatus: () =>
+    fetchWithAuth<{ copilot: string; phase: string; configured: boolean; model: string | null; status: string }>("/api/copilot/status"),
+
   // Auth & Personnel Directory
   login: (email: string, password?: string, role?: string) =>
     fetchWithAuth<{ token: string; user: User }>("/api/auth/login", {

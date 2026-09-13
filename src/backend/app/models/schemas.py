@@ -291,3 +291,24 @@ class OptimizationRunResponse(BaseModel):
 
 class ApplyScheduleRequest(BaseModel):
     run_id: str
+
+
+# -----------------------------------------------------------------------------
+# Copilot Chat Schemas
+# -----------------------------------------------------------------------------
+class CopilotMessage(BaseModel):
+    role: str = Field(..., description="'user' or 'assistant'")
+    content: str
+
+
+class CopilotChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=4000, description="User's message to the Copilot")
+    history: Optional[List[CopilotMessage]] = Field(default=None, description="Prior conversation turns for this session")
+    session_id: Optional[str] = Field(default=None, description="Optional client-side session identifier")
+
+
+class CopilotChatResponse(BaseModel):
+    reply: str
+    session_id: Optional[str] = None
+    model: str
+    role_context: str
