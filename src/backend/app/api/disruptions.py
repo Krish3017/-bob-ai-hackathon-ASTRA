@@ -78,7 +78,7 @@ def update_disruption(
         raise HTTPException(status_code=404, detail="Disruption incident not found")
 
     item = port_repo.disruptions[disruption_id]
-    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    update_data = payload.model_dump(exclude_unset=True)
     item.update(update_data)
 
     # If resolved, restore affected resource if feasible

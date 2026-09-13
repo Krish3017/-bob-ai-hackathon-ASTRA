@@ -76,6 +76,9 @@ export default function OperationsPage() {
       setCurrentRole(localStorage.getItem("naviops_role") || "operations");
     }
     loadAll();
+    // Auto-refresh every 30 seconds to reflect live vessel/berth state changes
+    const interval = setInterval(loadAll, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleDeleteVessel = async (id: string, name: string) => {

@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 
 # -----------------------------------------------------------------------------
 # User & Authentication Schemas (RBAC)
 # -----------------------------------------------------------------------------
 class UserBase(BaseModel):
-    email: str
+    email: EmailStr
     full_name: str
     role: str = Field(..., description="Role: 'admin', 'operations', or 'viewer'")
     department: Optional[str] = "Port Operations"
@@ -19,13 +19,13 @@ class UserResponse(UserBase):
 
 
 class LoginRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str = Field(..., min_length=1, description="User password")
     role: Optional[str] = None
 
 
 class SignupRequest(BaseModel):
-    email: str
+    email: EmailStr
     password: str
     full_name: str
     department: Optional[str] = "Port Operations"

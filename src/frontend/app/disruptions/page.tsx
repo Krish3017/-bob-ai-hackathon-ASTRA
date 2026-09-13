@@ -42,6 +42,9 @@ export default function DisruptionsPage() {
       setCurrentRole(localStorage.getItem("naviops_role") || "viewer");
     }
     loadAll();
+    // Auto-refresh every 30 seconds so new disruptions appear without manual reload
+    const interval = setInterval(loadAll, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleResolve = async (id: string) => {

@@ -63,7 +63,7 @@ def update_vessel(
         raise HTTPException(status_code=404, detail="Vessel not found")
 
     vessel = port_repo.vessels[vessel_id]
-    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    update_data = payload.model_dump(exclude_unset=True)
     update_data["updated_at"] = datetime.now(timezone.utc)
     vessel.update(update_data)
     port_repo.vessels[vessel_id] = vessel

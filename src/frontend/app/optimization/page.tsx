@@ -41,16 +41,24 @@ export default function OptimizationPage() {
       setCurrentRole(localStorage.getItem("naviops_role") || "viewer");
     }
     try {
-      const [latestRun, sum, bList, vList] = await Promise.all([
-        api.getLatestOptimizationRun(),
+      const [sum, bList, vList] = await Promise.all([
         api.getDashboardSummary(),
         api.getBerths(),
         api.getVessels(),
       ]);
-      setRun(latestRun);
       setSummary(sum);
       setBerths(bList);
       setVessels(vList);
+      // Latest run is optional — 404 simply means no run exists yet
+      try {
+        const latestRun = await api.getLatestOptimizationRun();
+        setRun(latestRun);
+      } catch (runErr: any) {
+        if (runErr?.status !== 404) {
+          console.error("Error loading latest optimization run:", runErr);
+        }
+        // 404 is expected when no run exists yet — leave run as null
+      }
     } catch (err) {
       console.error("Error loading optimization data:", err);
     } finally {
@@ -251,7 +259,9 @@ export default function OptimizationPage() {
           </div>
           <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-emerald-700 border-t border-slate-100 pt-2">
             <TrendingDown className="h-3 w-3" />
-            <span>-{metrics?.delay_reduction_pct || 34.5}% vs Baseline</span>
+            <span>
+              {metrics ? `-${metrics.delay_reduction_pct.toFixed(1)}% vs Baseline` : "Run optimizer to compute"}
+            </span>
           </div>
         </div>
 

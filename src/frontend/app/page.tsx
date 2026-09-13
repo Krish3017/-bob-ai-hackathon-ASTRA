@@ -50,6 +50,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
+    // Auto-refresh every 30 seconds so the dashboard stays live during demos
+    const interval = setInterval(loadData, 30_000);
+    return () => clearInterval(interval);
   }, []);
 
   const congestion = summary?.congestion;

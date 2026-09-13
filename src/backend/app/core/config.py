@@ -72,9 +72,13 @@ class Settings(BaseSettings):
         secret = self.JWT_SECRET or self.JWT_SECRET_KEY or self.SECRET_KEY or os.getenv("JWT_SECRET", "")
         if not secret:
             if self.APP_ENV == "production":
-                import logging
-                logging.getLogger("naviops.config").critical("CRITICAL: JWT_SECRET is not set in production! Using fallback.")
-            return "naviops-port-secret-key-2026-astra-bob"
+                raise RuntimeError(
+                    "FATAL: JWT_SECRET environment variable is not set. "
+                    "NaviOps cannot start in production without a secure JWT secret. "
+                    "Set JWT_SECRET to a strong random value (e.g. openssl rand -hex 32)."
+                )
+            # Development-only fallback — never reaches production due to check above
+            return "naviops-dev-only-secret-do-not-use-in-prod"
         return secret
 
     @property

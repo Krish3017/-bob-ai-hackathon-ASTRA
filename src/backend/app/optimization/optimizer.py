@@ -31,6 +31,11 @@ class PortOptimizer:
         self.disruptions = disruptions
 
     def solve(self) -> Dict[str, Any]:
+        # Pre-optimization baseline: sum of expected_waiting_time already on each vessel
+        pre_opt_waiting_hours = sum(
+            float(v.get("expected_waiting_time", 0.0)) for v in self.vessels
+        )
+
         model = cp_model.CpModel()
         horizon_slots = self.horizon_hours  # 1-hour time slots from 0 to 72
 
@@ -261,8 +266,18 @@ class PortOptimizer:
                 "vessels_scheduled": len(schedules_result),
                 "avg_waiting_hours": round(total_waiting_hours / max(1, len(schedules_result)), 1),
                 "berth_occupancy_ratio": round(min(0.92, (total_waiting_hours + 40) / (max(1, len(operable_berths)) * 72)), 2),
-                "crane_utilization_ratio": 0.78,
-                "delay_reduction_pct": 34.5  # Realistic savings metric for presentation
+                # Crane utilization: fraction of operable cranes currently active (Busy)
+                "crane_utilization_ratio": round(
+                    len([c for c in self.cranes if c.get("status") == "Busy"]) /
+                    max(1, len([c for c in self.cranes if c.get("status") in ["Available", "Busy"]])),
+                    2
+                ),
+                # Delay reduction: how much waiting time the optimizer eliminates vs the pre-run baseline
+                "delay_reduction_pct": round(
+                    max(0.0, (pre_opt_waiting_hours - total_waiting_hours) /
+                        max(1.0, pre_opt_waiting_hours) * 100.0),
+                    1
+                ),
             },
             "created_at": self.now
         }

@@ -8,13 +8,6 @@ from app.core.auth import get_current_user, require_role, create_access_token, h
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication & RBAC"])
 
-# Fallback credentials store for demo/evaluation accounts
-MOCK_PASSWORDS = {
-    "admin@naviops.port": "admin123",
-    "ops@naviops.port": "admin123",
-    "executive@naviops.port": "admin123",
-}
-
 
 @router.post("/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 def signup(req: SignupRequest):
@@ -93,10 +86,15 @@ def login(req: LoginRequest):
             detail="Invalid email or password."
         )
 
-    # Constant-time password verification against hashed password
-    expected_password = user_match.get("password_hash") or MOCK_PASSWORDS.get(user_match.get("email")) or "admin123"
+    # Constant-time password verification — only PBKDF2-hashed passwords accepted
+    password_hash = user_match.get("password_hash")
+    if not password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password."
+        )
 
-    if not verify_password(req.password, expected_password):
+    if not verify_password(req.password, password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password."

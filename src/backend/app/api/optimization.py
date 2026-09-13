@@ -8,13 +8,11 @@ from app.models.schemas import OptimizationRunResponse, ScheduleItemResponse, Ap
 router = APIRouter(prefix="/api/optimization", tags=["Optimization Engine"])
 
 
-@router.post("/run", response_model=OptimizationRunResponse, status_code=status.HTTP_201_CREATED)
-def trigger_optimization_run(
-    current_user: UserResponse = Depends(require_role(["admin", "operations"]))
-):
+def _execute_and_store_optimization() -> Dict[str, Any]:
     """
-    Execute Google OR-Tools CP-SAT optimization engine for next 72 hours.
-    Calculates non-overlapping berth assignments, crane allocations, and minimizes delays.
+    Shared helper: instantiate the CP-SAT optimizer, solve, persist results,
+    and return the run record dict. Called by both POST /run and the frontend
+    preload path. Extracted to eliminate code duplication.
     """
     optimizer = PortOptimizer(
         vessels=list(port_repo.vessels.values()),
@@ -23,20 +21,30 @@ def trigger_optimization_run(
         disruptions=list(port_repo.disruptions.values()),
         horizon_hours=72
     )
-
     run_result = optimizer.solve()
     run_id = run_result["id"]
 
-    # Store in memory repository
     port_repo.optimization_runs[run_id] = run_result
+
     schedules_data = []
     for item in run_result["schedules"]:
         item_dict = item.model_dump()
         dict.__setitem__(port_repo.schedules, item.id, item_dict)
         schedules_data.append(item_dict)
-
     port_repo.persist_items_batch("schedules", schedules_data)
 
+    return run_result
+
+
+@router.post("/run", response_model=OptimizationRunResponse, status_code=status.HTTP_201_CREATED)
+def trigger_optimization_run(
+    current_user: UserResponse = Depends(require_role(["admin", "operations"]))
+):
+    """
+    Execute Google OR-Tools CP-SAT optimization engine for next 72 hours.
+    Calculates non-overlapping berth assignments, crane allocations, and minimizes delays.
+    """
+    run_result = _execute_and_store_optimization()
     return OptimizationRunResponse(**run_result)
 
 
@@ -50,27 +58,16 @@ def list_optimization_runs(current_user: UserResponse = Depends(get_current_user
 
 @router.get("/runs/latest", response_model=OptimizationRunResponse)
 def get_latest_optimization_run(current_user: UserResponse = Depends(get_current_user)):
-    """Retrieve the most recent optimization plan, or generate one if none exists"""
+    """
+    Retrieve the most recent optimization plan.
+    Returns 404 if no runs exist — use POST /run to generate one.
+    (Side-effect-free: GET endpoints must not mutate state or trigger computation.)
+    """
     if not port_repo.optimization_runs:
-        # Run automatically on first request
-        optimizer = PortOptimizer(
-            vessels=list(port_repo.vessels.values()),
-            berths=list(port_repo.berths.values()),
-            cranes=list(port_repo.cranes.values()),
-            disruptions=list(port_repo.disruptions.values()),
-            horizon_hours=72
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No optimization runs found. POST to /api/optimization/run to generate a plan."
         )
-        run_result = optimizer.solve()
-        run_id = run_result["id"]
-        port_repo.optimization_runs[run_id] = run_result
-        schedules_data = []
-        for item in run_result["schedules"]:
-            item_dict = item.model_dump()
-            dict.__setitem__(port_repo.schedules, item.id, item_dict)
-            schedules_data.append(item_dict)
-        port_repo.persist_items_batch("schedules", schedules_data)
-        return OptimizationRunResponse(**run_result)
-
     runs = list(port_repo.optimization_runs.values())
     runs.sort(key=lambda r: str(r.get("created_at", "")), reverse=True)
     return OptimizationRunResponse(**runs[0])

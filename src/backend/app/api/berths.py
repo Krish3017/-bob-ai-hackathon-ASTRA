@@ -57,7 +57,7 @@ def update_berth(
         raise HTTPException(status_code=404, detail="Berth not found")
 
     berth = port_repo.berths[berth_id]
-    update_data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    update_data = payload.model_dump(exclude_unset=True)
     update_data["updated_at"] = datetime.now(timezone.utc)
     berth.update(update_data)
     port_repo.berths[berth_id] = berth
