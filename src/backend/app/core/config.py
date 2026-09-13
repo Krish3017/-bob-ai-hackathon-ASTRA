@@ -45,21 +45,25 @@ class Settings(BaseSettings):
         elif isinstance(v, list):
             return [str(i).strip() for i in v]
         return ["http://localhost:3000", "http://127.0.0.1:3000"]
-    
+
     # Direct PostgreSQL / Supabase connection
     DATABASE_URL: str = ""
     DIRECT_URL: str = ""
-    
+
     # Supabase connection
     SUPABASE_URL: str = ""
     SUPABASE_KEY: str = ""
-    
+
     # JWT / Auth
     JWT_SECRET: str = ""
     JWT_SECRET_KEY: str = ""
     SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
+
+    # Groq AI — Copilot inference
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
 
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env", "../../.env"),
@@ -105,4 +109,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
