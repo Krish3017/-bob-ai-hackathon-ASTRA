@@ -11,6 +11,16 @@ from app.models.schemas import (
 )
 from app.services.groq_service import copilot_service
 from app.services.copilot_tools import execute_tool, ALLOWED_TOOLS
+from app.services.conversation_repo import (
+    ConversationDBError,
+    create_conversation,
+    get_conversation,
+    add_message,
+    get_history_for_groq,
+    touch_conversation,
+    ensure_tables_exist,
+    _generate_title,
+)
 from app.core.config import settings
 
 logger = logging.getLogger("naviops.copilot.api")
@@ -19,6 +29,12 @@ router = APIRouter(prefix="/api/copilot", tags=["Bob Copilot"])
 
 # History max turns to send to Groq — keeps request size bounded
 _MAX_HISTORY_TURNS = 10
+
+# Run migration guard once at module load (non-fatal if DB is unavailable)
+try:
+    ensure_tables_exist()
+except Exception:
+    pass
 
 
 @router.post("/chat", response_model=CopilotChatResponse)
@@ -29,11 +45,14 @@ def copilot_chat(
     """
     Send a message to Bob Copilot and receive an AI-generated operational response.
 
-    - Groq tool-calling enabled: the LLM may request approved read-only data tools.
-    - Backend validates, authorizes, and executes each tool call.
-    - Read-only: this endpoint never modifies database state.
-    - History is bounded to the last 10 turns to limit request size.
-    - Accessible to all authenticated roles (admin, operations, viewer).
+    Persistence behaviour:
+    - If conversation_id is omitted, a new conversation is created automatically.
+    - If conversation_id is provided, ownership is verified before use.
+    - The user message and final assistant reply are both persisted.
+    - Database history is the source of truth; any client-supplied history is ignored.
+    - If the database is unavailable, chat still functions using the in-request
+      history field as a fallback, but the conversation is not persisted.
+    - Read-only: this endpoint never modifies operational NaviOps state.
     """
     if not payload.message.strip():
         raise HTTPException(
@@ -41,19 +60,86 @@ def copilot_chat(
             detail="Message must not be empty.",
         )
 
-    # Bound history to prevent excessive token usage
-    raw_history = payload.history or []
-    bounded = raw_history[-_MAX_HISTORY_TURNS:] if len(raw_history) > _MAX_HISTORY_TURNS else raw_history
-    history = [{"role": m.role, "content": m.content} for m in bounded] if bounded else None
+    user_message = payload.message.strip()
+    db_available = True
+    conversation_id: str | None = payload.conversation_id
 
-    # Tool executor closure — binds authenticated user to every tool call
+    # ------------------------------------------------------------------
+    # 1. Resolve or create conversation
+    # ------------------------------------------------------------------
+    if conversation_id:
+        # Verify ownership server-side — never trust the frontend ID alone
+        try:
+            conv = get_conversation(conversation_id=conversation_id, user_id=current_user.id)
+            if conv is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Conversation not found.",
+                )
+        except ConversationDBError:
+            db_available = False
+            logger.warning(
+                "DB unavailable during conversation lookup | conv=%s | user=%s",
+                conversation_id, current_user.email,
+            )
+    else:
+        # Auto-create a new conversation
+        title = _generate_title(user_message)
+        try:
+            conv_row = create_conversation(user_id=current_user.id, title=title)
+            conversation_id = conv_row["id"]
+        except ConversationDBError:
+            db_available = False
+            conversation_id = None
+            logger.warning(
+                "DB unavailable; chat proceeding without persistence | user=%s",
+                current_user.email,
+            )
+
+    # ------------------------------------------------------------------
+    # 2. Build Groq history from database (or client fallback)
+    # ------------------------------------------------------------------
+    if db_available and conversation_id:
+        history = get_history_for_groq(
+            conversation_id=conversation_id,
+            max_turns=_MAX_HISTORY_TURNS,
+        )
+    else:
+        # Fallback: use client-supplied history (legacy behaviour)
+        raw_history = payload.history or []
+        bounded = raw_history[-_MAX_HISTORY_TURNS:] if len(raw_history) > _MAX_HISTORY_TURNS else raw_history
+        history = [{"role": m.role, "content": m.content} for m in bounded] if bounded else []
+
+    # ------------------------------------------------------------------
+    # 3. Persist the user message before calling Groq
+    # ------------------------------------------------------------------
+    if db_available and conversation_id:
+        try:
+            add_message(
+                conversation_id=conversation_id,
+                role="user",
+                content=user_message,
+            )
+        except ConversationDBError:
+            db_available = False
+            logger.warning(
+                "Failed to persist user message | conv=%s | user=%s",
+                conversation_id, current_user.email,
+            )
+
+    # ------------------------------------------------------------------
+    # 4. Tool executor — binds authenticated user to every tool call
+    # ------------------------------------------------------------------
     def _tool_executor(tool_name: str, arguments: dict) -> dict:
         return execute_tool(tool_name, arguments, current_user)
 
+    # ------------------------------------------------------------------
+    # 5. Groq inference
+    # ------------------------------------------------------------------
     try:
         reply, tools_used = copilot_service.chat(
-            user_message=payload.message.strip(),
-            history=history,
+            user_message=user_message,
+            history=history or None,
             user_role=current_user.role,
             tool_executor=_tool_executor,
         )
@@ -75,9 +161,27 @@ def copilot_chat(
             detail=error_msg,
         )
 
+    # ------------------------------------------------------------------
+    # 6. Persist the successful assistant reply
+    # ------------------------------------------------------------------
+    if db_available and conversation_id:
+        try:
+            add_message(
+                conversation_id=conversation_id,
+                role="assistant",
+                content=reply,
+            )
+            touch_conversation(conversation_id)
+        except ConversationDBError:
+            # Non-fatal: the user still gets their response
+            logger.warning(
+                "Failed to persist assistant reply | conv=%s | user=%s",
+                conversation_id, current_user.email,
+            )
+
     return CopilotChatResponse(
         reply=reply,
-        session_id=payload.session_id,
+        session_id=conversation_id or payload.session_id,
         model=settings.GROQ_MODEL,
         role_context=current_user.role,
         tools_used=tools_used if tools_used else None,

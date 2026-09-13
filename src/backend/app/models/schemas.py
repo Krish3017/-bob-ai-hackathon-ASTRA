@@ -303,8 +303,9 @@ class CopilotMessage(BaseModel):
 
 class CopilotChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4000, description="User's message to the Copilot")
-    history: Optional[List[CopilotMessage]] = Field(default=None, description="Prior conversation turns for this session")
+    history: Optional[List[CopilotMessage]] = Field(default=None, description="Prior conversation turns for this session (deprecated: DB is now the source of truth)")
     session_id: Optional[str] = Field(default=None, description="Optional client-side session identifier")
+    conversation_id: Optional[str] = Field(default=None, description="Persistent conversation UUID; omit to create a new conversation")
 
 
 class CopilotChatResponse(BaseModel):
@@ -321,3 +322,41 @@ class CopilotActionResponse(BaseModel):
     status: str  # "success" | "error" | "permission_denied"
     message: str
     result: Optional[Dict[str, Any]] = None
+
+
+# -----------------------------------------------------------------------------
+# Copilot Conversation Persistence Schemas
+# -----------------------------------------------------------------------------
+
+class ConversationSummary(BaseModel):
+    """Lightweight conversation entry for list views."""
+    id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class MessageResponse(BaseModel):
+    """A single persisted message in a conversation."""
+    id: str
+    conversation_id: str
+    role: str
+    content: str
+    created_at: datetime
+
+
+class ConversationDetail(BaseModel):
+    """Full conversation with messages."""
+    id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    messages: List[MessageResponse]
+
+
+class ConversationCreateRequest(BaseModel):
+    title: Optional[str] = Field(default=None, max_length=200, description="Optional title; defaults to 'New conversation'")
+
+
+class ConversationTitleUpdate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)

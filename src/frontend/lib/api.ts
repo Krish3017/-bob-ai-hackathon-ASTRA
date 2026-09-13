@@ -197,18 +197,74 @@ export const api = {
       body: JSON.stringify({ run_id: runId }),
     }),
 
-  // Copilot
-  copilotChat: (message: string, history?: Array<{ role: string; content: string }>, sessionId?: string) =>
-    fetchWithAuth<{ reply: string; session_id?: string; model: string; role_context: string; tools_used?: string[] | null }>("/api/copilot/chat", {
+  // Copilot — Chat
+  copilotChat: (
+    message: string,
+    history?: Array<{ role: string; content: string }>,
+    sessionId?: string,
+    conversationId?: string,
+  ) =>
+    fetchWithAuth<{
+      reply: string;
+      session_id?: string;
+      model: string;
+      role_context: string;
+      tools_used?: string[] | null;
+    }>("/api/copilot/chat", {
       method: "POST",
-      body: JSON.stringify({ message, history: history ?? [], session_id: sessionId }),
+      body: JSON.stringify({
+        message,
+        history: history ?? [],
+        session_id: sessionId,
+        conversation_id: conversationId ?? null,
+      }),
     }),
   copilotStatus: () =>
-    fetchWithAuth<{ copilot: string; phase: string; configured: boolean; model: string | null; status: string; tools_available: string[]; actions_available: string[] }>("/api/copilot/status"),
+    fetchWithAuth<{
+      copilot: string;
+      phase: string;
+      configured: boolean;
+      model: string | null;
+      status: string;
+      tools_available: string[];
+      actions_available: string[];
+    }>("/api/copilot/status"),
   copilotRunOptimization: () =>
     fetchWithAuth<{ action: string; status: string; message: string; result: Record<string, unknown> | null }>("/api/copilot/action/run-optimization", {
       method: "POST",
     }),
+
+  // Copilot — Conversation persistence
+  listConversations: () =>
+    fetchWithAuth<Array<{ id: string; title: string; created_at: string; updated_at: string }>>(
+      "/api/copilot/conversations"
+    ),
+  createConversation: (title?: string) =>
+    fetchWithAuth<{ id: string; title: string; created_at: string; updated_at: string }>(
+      "/api/copilot/conversations",
+      {
+        method: "POST",
+        body: JSON.stringify({ title: title ?? null }),
+      }
+    ),
+  getConversation: (id: string) =>
+    fetchWithAuth<{
+      id: string;
+      title: string;
+      created_at: string;
+      updated_at: string;
+      messages: Array<{ id: string; conversation_id: string; role: string; content: string; created_at: string }>;
+    }>(`/api/copilot/conversations/${id}`),
+  renameConversation: (id: string, title: string) =>
+    fetchWithAuth<{ id: string; title: string; created_at: string; updated_at: string }>(
+      `/api/copilot/conversations/${id}/title`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ title }),
+      }
+    ),
+  deleteConversation: (id: string) =>
+    fetchWithAuth<void>(`/api/copilot/conversations/${id}`, { method: "DELETE" }),
 
   // Auth & Personnel Directory
   login: (email: string, password?: string, role?: string) =>
