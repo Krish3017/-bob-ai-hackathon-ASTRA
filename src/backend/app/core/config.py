@@ -1,5 +1,6 @@
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 import os
+import secrets
 import re
 import urllib.parse
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -10,7 +11,7 @@ def sanitize_database_url(url: str) -> str:
     if not url:
         return ""
     url = url.strip()
-    pattern = r'^(postgresql(?:\+\w+)?://)([^:]+):(.*)@([^@]+:\d+/[^?]+)(.*)$'
+    pattern = r'^(postgresql(?:\+\w+)?://)([^:]+):(.*)@([^@/]+(?::\d+)?/[^?]+)(.*)$'
     match = re.match(pattern, url)
     if match:
         prefix, user, password, host_db, rest = match.groups()
@@ -19,12 +20,31 @@ def sanitize_database_url(url: str) -> str:
     return url
 
 
+from pydantic import field_validator
+
+
 class Settings(BaseSettings):
     APP_NAME: str = "NaviOps Port Operations Optimizer"
     APP_ENV: str = "development"
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> List[str]:
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
+                import json
+                try:
+                    return json.loads(v_str)
+                except Exception:
+                    pass
+            return [i.strip() for i in v_str.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return [str(i).strip() for i in v]
+        return ["http://localhost:3000", "http://127.0.0.1:3000"]
     
     # Direct PostgreSQL / Supabase connection
     DATABASE_URL: str = ""
@@ -35,33 +55,48 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str = ""
     
     # JWT / Auth
-    JWT_SECRET: str = "naviops-port-secret-key-2026-astra-bob"
+    JWT_SECRET: str = ""
     JWT_SECRET_KEY: str = ""
     SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../.env", "../../.env"),
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
 
     @property
     def effective_jwt_secret(self) -> str:
-        return self.JWT_SECRET or self.JWT_SECRET_KEY or self.SECRET_KEY or "naviops-port-secret-key-2026-astra-bob"
-
+        secret = self.JWT_SECRET or self.JWT_SECRET_KEY or self.SECRET_KEY or os.getenv("JWT_SECRET", "")
+        if not secret:
+            if self.APP_ENV == "production":
+                import logging
+                logging.getLogger("naviops.config").critical("CRITICAL: JWT_SECRET is not set in production! Using fallback.")
+            return "naviops-port-secret-key-2026-astra-bob"
+        return secret
 
     @property
     def clean_database_url(self) -> str:
         raw_url = self.DATABASE_URL or self.DIRECT_URL
-        if not raw_url and os.path.exists(".env"):
-            # Check if there is a raw postgresql:// connection line without variable name
-            try:
-                with open(".env", "r", encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if line.startswith("postgresql://"):
-                            raw_url = line
+        if not raw_url:
+            for env_candidate in [".env", "../.env", "../../.env"]:
+                if os.path.exists(env_candidate):
+                    try:
+                        with open(env_candidate, "r", encoding="utf-8") as f:
+                            for line in f:
+                                line = line.strip()
+                                if line.startswith("postgresql://"):
+                                    raw_url = line
+                                    break
+                                elif line.startswith("DATABASE_URL="):
+                                    raw_url = line.split("=", 1)[1].strip().strip('"').strip("'")
+                                    break
+                        if raw_url:
                             break
-            except Exception:
-                pass
+                    except Exception:
+                        pass
         return sanitize_database_url(raw_url)
 
 

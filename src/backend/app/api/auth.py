@@ -4,11 +4,11 @@ from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.core.database import port_repo
 from app.models.schemas import LoginRequest, SignupRequest, UserRoleUpdate, AuthResponse, UserResponse
-from app.core.auth import get_current_user, require_role, create_access_token
+from app.core.auth import get_current_user, require_role, create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication & RBAC"])
 
-# Mock credentials store for hackathon evaluation
+# Fallback credentials store for demo/evaluation accounts
 MOCK_PASSWORDS = {
     "admin@naviops.port": "admin123",
     "ops@naviops.port": "admin123",
@@ -24,6 +24,12 @@ def signup(req: SignupRequest):
     A Port Manager / Admin can elevate permissions to 'operations' or 'admin' from the Users Directory.
     """
     email_clean = req.email.strip().lower()
+
+    if not req.password or len(req.password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters long."
+        )
 
     # Check for existing email
     for u in port_repo.users.values():
@@ -42,7 +48,7 @@ def signup(req: SignupRequest):
         "full_name": req.full_name.strip(),
         "role": "viewer",  # Strictly start as viewer as required
         "department": req.department.strip() if req.department else "Port Logistics",
-        "password_hash": req.password,
+        "password_hash": hash_password(req.password),
         "created_at": now
     }
 
@@ -81,27 +87,19 @@ def login(req: LoginRequest):
             user_match = u
             break
 
-    # If role-based shorthand was requested and not found by email
-    if not user_match and req.role:
-        for u in port_repo.users.values():
-            if u.get("role", "").lower() == req.role.lower():
-                user_match = u
-                break
-
     if not user_match:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found. Please check the email address or sign up."
+            detail="Invalid email or password."
         )
 
-    # Password validation
+    # Constant-time password verification against hashed password
     expected_password = user_match.get("password_hash") or MOCK_PASSWORDS.get(user_match.get("email")) or "admin123"
-    provided_password = req.password or "admin123"
 
-    if provided_password != expected_password:
+    if not verify_password(req.password, expected_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password. For demo accounts, default password is 'admin123'."
+            detail="Invalid email or password."
         )
 
     # Generate signed JWT
@@ -163,6 +161,16 @@ def update_user_role(
         )
 
     user = port_repo.users[user_id]
+
+    # Guard: prevent demoting the last active administrator
+    if user.get("role") == "admin" and new_role != "admin":
+        admin_count = sum(1 for u in port_repo.users.values() if u.get("role") == "admin")
+        if admin_count <= 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot demote the only remaining administrator account."
+            )
+
     user["role"] = new_role
     port_repo.users[user_id] = user  # Triggers live sync to Supabase
 

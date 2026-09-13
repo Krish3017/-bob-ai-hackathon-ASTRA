@@ -105,23 +105,35 @@ def apply_optimization_schedule(
 ):
     """
     Approve & Apply recommended 72-hour schedule (Port Manager / Admin only).
-    Updates assigned berths on affected vessels.
+    Updates assigned berths on affected vessels and persists state.
     """
     if req.run_id not in port_repo.optimization_runs:
         raise HTTPException(status_code=404, detail="Optimization run not found")
 
-    run_record = port_repo.optimization_runs[req.run_id]
-    schedules = run_record["schedules"]
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+
+    run_record = dict(port_repo.optimization_runs[req.run_id])
+    schedules = run_record.get("schedules", [])
 
     applied_count = 0
     for sched in schedules:
-        v_id = sched.vessel_id
-        if v_id in port_repo.vessels:
-            port_repo.vessels[v_id]["assigned_berth_id"] = sched.berth_id
-            port_repo.vessels[v_id]["expected_waiting_time"] = sched.waiting_time
+        v_id = sched.vessel_id if hasattr(sched, "vessel_id") else sched.get("vessel_id")
+        b_id = sched.berth_id if hasattr(sched, "berth_id") else sched.get("berth_id")
+        w_time = sched.waiting_time if hasattr(sched, "waiting_time") else sched.get("waiting_time", 0.0)
+
+        if v_id and v_id in port_repo.vessels:
+            vessel = dict(port_repo.vessels[v_id])
+            vessel["assigned_berth_id"] = b_id
+            vessel["expected_waiting_time"] = float(w_time)
+            vessel["updated_at"] = now
+            port_repo.vessels[v_id] = vessel
             applied_count += 1
 
     run_record["applied"] = True
+    run_record["applied_by"] = current_user.id
+    port_repo.optimization_runs[req.run_id] = run_record
+
     return {
         "status": "success",
         "message": f"Successfully applied schedule plan to {applied_count} vessels.",

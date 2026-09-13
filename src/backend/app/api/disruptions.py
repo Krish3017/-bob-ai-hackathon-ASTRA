@@ -46,14 +46,23 @@ def create_disruption(
     res_id = data.get("affected_resource_id")
     if res_id:
         if res_type == "crane" and res_id in port_repo.cranes:
+            crane = dict(port_repo.cranes[res_id])
             if "fail" in data.get("disruption_type", "").lower():
-                port_repo.cranes[res_id]["status"] = "Failed"
+                crane["status"] = "Failed"
             else:
-                port_repo.cranes[res_id]["status"] = "Maintenance"
+                crane["status"] = "Maintenance"
+            crane["updated_at"] = now
+            port_repo.cranes[res_id] = crane
         elif res_type == "berth" and res_id in port_repo.berths:
-            port_repo.berths[res_id]["status"] = "Maintenance"
+            berth = dict(port_repo.berths[res_id])
+            berth["status"] = "Maintenance"
+            berth["updated_at"] = now
+            port_repo.berths[res_id] = berth
         elif res_type == "vessel" and res_id in port_repo.vessels:
-            port_repo.vessels[res_id]["status"] = "Delayed"
+            vessel = dict(port_repo.vessels[res_id])
+            vessel["status"] = "Delayed"
+            vessel["updated_at"] = now
+            port_repo.vessels[res_id] = vessel
 
     return DisruptionResponse(**data)
 
@@ -76,11 +85,24 @@ def update_disruption(
     if update_data.get("status") in ["Resolved", "Mitigated"]:
         res_type = item.get("affected_resource_type")
         res_id = item.get("affected_resource_id")
+        now = datetime.now(timezone.utc)
         if res_id:
             if res_type == "crane" and res_id in port_repo.cranes:
-                port_repo.cranes[res_id]["status"] = "Available"
+                crane = dict(port_repo.cranes[res_id])
+                crane["status"] = "Available"
+                crane["updated_at"] = now
+                port_repo.cranes[res_id] = crane
             elif res_type == "berth" and res_id in port_repo.berths:
-                port_repo.berths[res_id]["status"] = "Available"
+                berth = dict(port_repo.berths[res_id])
+                berth["status"] = "Available"
+                berth["updated_at"] = now
+                port_repo.berths[res_id] = berth
+            elif res_type == "vessel" and res_id in port_repo.vessels:
+                vessel = dict(port_repo.vessels[res_id])
+                if vessel.get("status") == "Delayed":
+                    vessel["status"] = "Scheduled"
+                    vessel["updated_at"] = now
+                    port_repo.vessels[res_id] = vessel
 
     port_repo.disruptions[disruption_id] = item
     return DisruptionResponse(**item)

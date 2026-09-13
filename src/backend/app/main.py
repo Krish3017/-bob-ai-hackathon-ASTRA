@@ -28,15 +28,33 @@ app.add_middleware(
 )
 
 
-@app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    import logging
-    from fastapi.responses import JSONResponse
-    logging.getLogger("naviops").error(f"Unhandled error: {exc}", exc_info=True)
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import JSONResponse
+import logging
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc: StarletteHTTPException):
     origin = request.headers.get("origin")
     res = JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=getattr(exc, "headers", None)
+    )
+    if origin and origin in allowed_origins:
+        res.headers["Access-Control-Allow-Origin"] = origin
+        res.headers["Access-Control-Allow-Credentials"] = "true"
+    return res
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc: Exception):
+    logging.getLogger("naviops").error(f"Unhandled error: {exc}", exc_info=True)
+    origin = request.headers.get("origin")
+    err_detail = "Internal Server Error" if settings.APP_ENV == "production" else f"Internal Server Error: {str(exc)}"
+    res = JSONResponse(
         status_code=500,
-        content={"detail": f"Internal Server Error: {str(exc)}"}
+        content={"detail": err_detail}
     )
     if origin and origin in allowed_origins:
         res.headers["Access-Control-Allow-Origin"] = origin

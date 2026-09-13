@@ -121,3 +121,169 @@ def test_rbac_restrictions():
         headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert res_admin_delete.status_code == 204
+
+
+from app.core.auth import hash_password, verify_password
+
+
+def test_password_hashing_and_verification():
+    pwd = "SecurePortPassword2026!"
+    hashed = hash_password(pwd)
+    assert hashed != pwd
+    assert "$" in hashed
+    assert verify_password(pwd, hashed) is True
+    assert verify_password("WrongPassword", hashed) is False
+    assert verify_password("", hashed) is False
+
+
+def test_signup_and_login_flow():
+    # 1. Signup new personnel
+    signup_res = client.post("/api/auth/signup", json={
+        "email": "engineer.test@naviops.port",
+        "password": "EnginePassword123!",
+        "full_name": "Chief Engineer John",
+        "department": "Quayside Engineering"
+    })
+    assert signup_res.status_code == 201
+    signup_data = signup_res.json()
+    assert "token" in signup_data
+    assert signup_data["user"]["role"] == "viewer"
+    user_id = signup_data["user"]["id"]
+
+    # Verify password is not plaintext in memory
+    raw_user = port_repo.users[user_id]
+    assert raw_user["password_hash"] != "EnginePassword123!"
+
+    # 2. Login with correct password
+    login_res = client.post("/api/auth/login", json={
+        "email": "engineer.test@naviops.port",
+        "password": "EnginePassword123!"
+    })
+    assert login_res.status_code == 200
+    assert "token" in login_res.json()
+
+    # 3. Login with incorrect password
+    bad_login = client.post("/api/auth/login", json={
+        "email": "engineer.test@naviops.port",
+        "password": "WrongPassword!"
+    })
+    assert bad_login.status_code == 401
+
+
+def test_disruption_side_effects_and_persistence():
+    admin_token = create_access_token({"sub": "11111111-1111-1111-1111-111111111111", "email": "admin@naviops.port", "role": "admin"})
+
+    # Report failure on CR-08
+    res = client.post("/api/disruptions", json={
+        "disruption_type": "Equipment Failure",
+        "title": "CR-08 Gearbox Jam Test",
+        "affected_resource_type": "crane",
+        "affected_resource_id": "c0000008-0000-0000-0000-000000000008",
+        "severity": "High"
+    }, headers={"Authorization": f"Bearer {admin_token}"})
+    assert res.status_code == 201
+    disruption_id = res.json()["id"]
+
+    # Verify crane status was updated to Failed
+    assert port_repo.cranes["c0000008-0000-0000-0000-000000000008"]["status"] == "Failed"
+
+    # Resolve disruption
+    res_update = client.put(f"/api/disruptions/{disruption_id}", json={
+        "status": "Resolved"
+    }, headers={"Authorization": f"Bearer {admin_token}"})
+    assert res_update.status_code == 200
+
+    # Verify crane status is restored to Available
+    assert port_repo.cranes["c0000008-0000-0000-0000-000000000008"]["status"] == "Available"
+
+
+def test_apply_schedule_with_dict_and_model():
+    admin_token = create_access_token({"sub": "11111111-1111-1111-1111-111111111111", "email": "admin@naviops.port", "role": "admin"})
+
+    # Run optimization
+    res_run = client.post("/api/optimization/run", headers={"Authorization": f"Bearer {admin_token}"})
+    assert res_run.status_code == 201
+    run_id = res_run.json()["id"]
+
+    # Apply schedule
+    res_apply = client.post("/api/optimization/apply", json={"run_id": run_id}, headers={"Authorization": f"Bearer {admin_token}"})
+    assert res_apply.status_code == 200
+    assert res_apply.json()["status"] == "success"
+
+    # Verify optimization run record was marked applied
+    assert port_repo.optimization_runs[run_id]["applied"] is True
+
+    # Test re-applying with dict items (simulating rows loaded from PostgreSQL)
+    run_dict = dict(port_repo.optimization_runs[run_id])
+    run_dict["schedules"] = [
+        {
+            "id": "test-sched-1",
+            "optimization_run_id": run_id,
+            "vessel_id": "f0000003-0000-0000-0000-000000000003",
+            "berth_id": "b0000004-0000-0000-0000-000000000004",
+            "waiting_time": 1.5,
+            "duration_hours": 6.0,
+            "vessel_name": "Maersk Mc-Kinney Moller",
+            "vessel_code": "IMO-9632064",
+            "berth_code": "B-04",
+            "berth_name": "Central Terminal Berth 4",
+            "planned_start": "2026-09-15T00:00:00Z",
+            "planned_end": "2026-09-15T06:00:00Z",
+            "assigned_cranes": ["CR-07", "CR-08"],
+            "assignment_reason": "Test dict schedule apply",
+            "status": "Proposed"
+        }
+    ]
+    port_repo.optimization_runs["dict-run-test"] = run_dict
+    res_dict_apply = client.post("/api/optimization/apply", json={"run_id": "dict-run-test"}, headers={"Authorization": f"Bearer {admin_token}"})
+    assert res_dict_apply.status_code == 200
+    assert port_repo.vessels["f0000003-0000-0000-0000-000000000003"]["assigned_berth_id"] == "b0000004-0000-0000-0000-000000000004"
+
+
+def test_optimizer_timezone_and_empty_berths():
+    from datetime import datetime
+    # Naive datetimes without tzinfo
+    vessels = [
+        {
+            "id": "v-naive-1",
+            "vessel_code": "IMO-NAIVE",
+            "vessel_name": "Naive Vessel",
+            "shipping_line": "TestLine",
+            "cargo_volume": 800,
+            "vessel_length": 200.0,
+            "eta": datetime(2026, 9, 15, 10, 0),
+            "etd": datetime(2026, 9, 16, 10, 0),
+            "priority": 2,
+            "status": "Scheduled"
+        }
+    ]
+    optimizer = PortOptimizer(
+        vessels=vessels,
+        berths=[],  # Empty berths edge case
+        cranes=[],
+        disruptions=[],
+        horizon_hours=72
+    )
+    result = optimizer.solve()
+    assert result["status"] in ["OPTIMAL", "FEASIBLE"]
+    assert "metrics" in result
+    assert result["metrics"]["berth_occupancy_ratio"] >= 0
+
+
+def test_prevent_demoting_only_admin():
+    admin_token = create_access_token({"sub": "11111111-1111-1111-1111-111111111111", "email": "admin@naviops.port", "role": "admin"})
+
+    # Ensure only 1 admin
+    for uid, u in list(port_repo.users.items()):
+        if u.get("role") == "admin" and uid != "11111111-1111-1111-1111-111111111111":
+            u["role"] = "operations"
+            port_repo.users[uid] = u
+
+    # Demoting the sole admin must fail
+    res = client.put(
+        "/api/auth/users/11111111-1111-1111-1111-111111111111/role",
+        json={"role": "viewer"},
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert res.status_code == 400
+    assert "Cannot demote the only remaining administrator" in res.json()["detail"]

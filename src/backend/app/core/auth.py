@@ -1,13 +1,41 @@
 import logging
+import hashlib
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 import jwt
 from fastapi import Header, HTTPException, status, Depends
 from app.core.config import settings
-from app.core.database import port_repo
-from app.models.schemas import UserResponse
+from app.models.schemas import SignupRequest, LoginRequest, AuthResponse, UserResponse
 
 logger = logging.getLogger("naviops.auth")
+
+import secrets
+
+
+def hash_password(password: str) -> str:
+    """Hash a password using PBKDF2-HMAC-SHA256 with a unique 16-byte salt (NIST compliant)."""
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+    return f"{salt}${key.hex()}"
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash with constant-time comparison."""
+    if not hashed_password or not plain_password:
+        return False
+    if "$" not in hashed_password:
+        # Legacy/demo accounts check (plain match or legacy sha256)
+        if secrets.compare_digest(plain_password, hashed_password):
+            return True
+        old_hash = hashlib.sha256(plain_password.encode()).hexdigest()
+        return secrets.compare_digest(old_hash, hashed_password)
+    try:
+        salt, key_hex = hashed_password.split("$", 1)
+        test_key = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), salt.encode("utf-8"), 100_000)
+        return secrets.compare_digest(test_key.hex(), key_hex)
+    except Exception:
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -72,6 +100,7 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> UserRespons
     email = payload.get("email")
 
     # Match user in persistent repository
+    from app.core.database import port_repo
     user = None
     if user_id and user_id in port_repo.users:
         user = port_repo.users[user_id]
