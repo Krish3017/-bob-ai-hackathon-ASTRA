@@ -47,15 +47,15 @@ export default function YardsPage() {
         {yards.map((y) => {
           const util = y.utilization_percentage || 0;
           const isHigh = util >= 85;
-          const barColor = util >= 90 ? "bg-rose-500" : util >= 75 ? "bg-amber-500" : "bg-blue-600";
+          const barColor = util >= 90 ? "bg-rose-500" : util >= 75 ? "bg-amber-500" : "bg-[#004741]";
 
           return (
-            <Card key={y.id} className="border-slate-200">
+            <Card key={y.id} className="border-[#E3E5E0]">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Boxes className="h-4 w-4 text-blue-600" />
-                    <span className="font-bold text-sm text-slate-900">{y.yard_code}</span>
+                    <Boxes className="h-4 w-4 text-[#004741]" />
+                    <span className="font-bold text-sm text-[#102A27]">{y.yard_code}</span>
                   </div>
                   <Badge variant="status" status={y.status}>
                     {y.status}
@@ -66,29 +66,29 @@ export default function YardsPage() {
               <CardContent className="space-y-4">
                 <div>
                   <div className="flex justify-between text-xs mb-1.5 font-medium">
-                    <span className="text-slate-500">Utilization Rate:</span>
-                    <span className={isHigh ? "text-rose-600 font-bold" : "text-slate-900 font-bold"}>
+                    <span className="text-[#5C6B68]">Utilization Rate:</span>
+                    <span className={isHigh ? "text-rose-600 font-bold" : "text-[#102A27] font-bold"}>
                       {util}%
                     </span>
                   </div>
-                  <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-2.5 w-full rounded-full bg-[#F0EDE4] overflow-hidden">
                     <div className={`h-full rounded-full ${barColor}`} style={{ width: `${Math.min(100, util)}%` }} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <div className="grid grid-cols-2 gap-2 text-xs bg-[#F7F6F2] p-3 rounded-lg border border-[#F0EDE4]">
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Total Capacity</span>
-                    <span className="font-bold text-slate-900">{(y.total_capacity ?? 0).toLocaleString()} TEU</span>
+                    <span className="text-[#899491] block text-[11px]">Total Capacity</span>
+                    <span className="font-bold text-[#102A27]">{(y.total_capacity ?? 0).toLocaleString()} TEU</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[11px]">Occupied Stack</span>
-                    <span className="font-bold text-slate-900">{(y.occupied_capacity ?? 0).toLocaleString()} TEU</span>
+                    <span className="text-[#899491] block text-[11px]">Occupied Stack</span>
+                    <span className="font-bold text-[#102A27]">{(y.occupied_capacity ?? 0).toLocaleString()} TEU</span>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                  <span className="text-xs text-slate-500 font-medium">{y.cargo_type}</span>
+                <div className="flex justify-between items-center pt-2 border-t border-[#F0EDE4]">
+                  <span className="text-xs text-[#5C6B68] font-medium">{y.cargo_type}</span>
                   {currentRole !== "viewer" ? (
                     <Button
                       variant="outline"
@@ -99,7 +99,7 @@ export default function YardsPage() {
                       Update TEU
                     </Button>
                   ) : (
-                    <span className="text-[11px] text-slate-400 font-medium italic">
+                    <span className="text-[11px] text-[#899491] font-medium italic">
                       Read-Only (Viewer)
                     </span>
                   )}

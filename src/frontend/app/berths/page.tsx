@@ -47,10 +47,10 @@ export default function BerthsPage() {
       allowedRoles={["admin", "operations", "viewer"]}
     >
       <AssetTabs />
-      <Card className="border-slate-200">
+      <Card className="border-[#E3E5E0]">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <Anchor className="h-4 w-4 text-blue-600" />
+            <Anchor className="h-4 w-4 text-[#004741]" />
             <CardTitle>Terminal Berth Inventory</CardTitle>
           </div>
           <CardDescription>
@@ -78,9 +78,9 @@ export default function BerthsPage() {
                 const currentVessel = vessels.find((v) => v.id === b.current_vessel_id);
                 return (
                   <TableRow key={b.id}>
-                    <TableCell className="font-bold text-slate-900">{b.berth_code}</TableCell>
-                    <TableCell className="text-slate-700 font-medium">{b.berth_name}</TableCell>
-                    <TableCell className="font-mono text-xs text-slate-800">
+                    <TableCell className="font-bold text-[#102A27]">{b.berth_code}</TableCell>
+                    <TableCell className="text-[#5C6B68] font-medium">{b.berth_name}</TableCell>
+                    <TableCell className="font-mono text-xs text-[#102A27]">
                       {b.max_vessel_length} meters
                     </TableCell>
                     <TableCell>
@@ -88,16 +88,16 @@ export default function BerthsPage() {
                         {b.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-800">
+                    <TableCell className="text-xs text-[#102A27]">
                       {currentVessel ? (
-                        <div className="font-semibold text-slate-900">
+                        <div className="font-semibold text-[#102A27]">
                           {currentVessel.vessel_name} ({currentVessel.vessel_code})
                         </div>
                       ) : (
-                        <span className="text-slate-400 italic">None (Ready for Berthing)</span>
+                        <span className="text-[#899491] italic">None (Ready for Berthing)</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-600">
+                    <TableCell className="text-xs text-[#5C6B68]">
                       {formatDateTime(b.available_from)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -111,7 +111,7 @@ export default function BerthsPage() {
                           Update Status
                         </Button>
                       ) : (
-                        <span className="text-[11px] text-slate-400 italic">Read-Only</span>
+                        <span className="text-[11px] text-[#899491] italic">Read-Only</span>
                       )}
                     </TableCell>
                   </TableRow>

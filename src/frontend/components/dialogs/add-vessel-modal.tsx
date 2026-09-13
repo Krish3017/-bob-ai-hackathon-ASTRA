@@ -180,7 +180,7 @@ export function AddVesselModal({ isOpen, onClose, onSuccess }: AddVesselModalPro
           </FormField>
         </div>
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+        <div className="flex justify-end gap-2 pt-3 border-t border-[#F0EDE4]">
           <Button variant="outline" type="button" onClick={onClose} disabled={loading}>
             Cancel
           </Button>

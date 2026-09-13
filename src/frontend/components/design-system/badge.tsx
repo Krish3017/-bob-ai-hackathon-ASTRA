@@ -18,7 +18,7 @@ export function Badge({
   className,
   size = "sm",
 }: BadgeProps) {
-  let badgeStyle = "bg-slate-100 text-slate-700 border-slate-200";
+  let badgeStyle = "bg-[#F0EDE4] text-[#5C6B68] border-[#E3E5E0]";
   let content = children;
 
   if (variant === "status" && status) {
@@ -30,7 +30,7 @@ export function Badge({
     badgeStyle = meta.badgeClass;
     if (!content) content = meta.label;
   } else if (variant === "outline") {
-    badgeStyle = "bg-white text-slate-700 border-slate-300";
+    badgeStyle = "bg-white text-[#5C6B68] border-[#D5D9D3]";
   }
 
   const sizeClasses = size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-sm";

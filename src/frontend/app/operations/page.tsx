@@ -116,21 +116,21 @@ export default function OperationsPage() {
       allowedRoles={["admin", "operations"]}
     >
       {/* 1. Primary Action Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-[#E3E5E0] bg-white p-3.5 shadow-card">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setIsAddVesselOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#004741] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#003B36] transition-colors cursor-pointer"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Add Vessel</span>
+            <Plus className="h-3.5 w-3.5 text-white" />
+            <span className="text-white">Add Vessel</span>
           </button>
 
           <button
             type="button"
             onClick={() => setIsAddDisruptionOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#E3E5E0] bg-white px-3 py-1.5 text-xs font-medium text-[#5C6B68] hover:bg-[#F7F6F2] transition-colors cursor-pointer"
           >
             <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
             <span>Report Disruption</span>
@@ -139,7 +139,7 @@ export default function OperationsPage() {
           <Link href="/optimization">
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#C5DDD9] bg-[#E1EFEC] px-3 py-1.5 text-xs font-semibold text-[#004741] hover:bg-[#C5DDD9] transition-colors"
             >
               <Zap className="h-3.5 w-3.5" />
               <span>Run 72h Solver</span>
@@ -150,13 +150,13 @@ export default function OperationsPage() {
         {/* Search & Filter Controls */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1 sm:w-48">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#899491]" />
             <input
               type="text"
               placeholder="Search vessel or line..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-md border border-slate-200 bg-slate-50 pl-8 pr-2.5 py-1 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-[#E3E5E0] bg-[#F7F6F2] pl-8 pr-2.5 py-1 text-xs text-[#102A27] placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -164,7 +164,7 @@ export default function OperationsPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              className="rounded-lg border border-[#E3E5E0] bg-[#F7F6F2] px-2.5 py-1 text-xs font-medium text-[#5C6B68] focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
               <option value="all">All Statuses ({vessels.length})</option>
               <option value="Waiting">Waiting ({vessels.filter((v) => v.status === "Waiting").length})</option>
@@ -178,15 +178,15 @@ export default function OperationsPage() {
       </div>
 
       {/* 2. Focused Vessel Operations Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+      <div className="rounded-xl border border-[#E3E5E0] bg-white shadow-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[#F0EDE4]">
           <div className="flex items-center gap-2">
-            <Ship className="h-4 w-4 text-blue-600" />
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-800">
+            <Ship className="h-4 w-4 text-[#004741]" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#102A27]">
               Vessel Fleet Queue ({filteredVessels.length})
             </h3>
           </div>
-          <span className="text-[11px] text-slate-400">
+          <span className="text-[11px] text-[#899491]">
             Click any row to reveal carrier and cargo specifications
           </span>
         </div>
@@ -216,47 +216,47 @@ export default function OperationsPage() {
                   <React.Fragment key={v.id}>
                     <TableRow
                       className={cn(
-                        "cursor-pointer transition-colors hover:bg-slate-50/80",
-                        isExpanded && "bg-slate-50/50"
+                        "cursor-pointer transition-colors hover:bg-[#F7F6F2]/80",
+                        isExpanded && "bg-[#F7F6F2]/50"
                       )}
                       onClick={() => toggleRow(v.id)}
                     >
-                      <TableCell className="w-8 text-center text-slate-400">
+                      <TableCell className="w-8 text-center text-[#899491]">
                         {isExpanded ? (
                           <ChevronUp className="h-3.5 w-3.5 mx-auto" />
                         ) : (
                           <ChevronDown className="h-3.5 w-3.5 mx-auto" />
                         )}
                       </TableCell>
-                      <TableCell className="font-semibold text-slate-900">
+                      <TableCell className="font-semibold text-[#102A27]">
                         <div>{v.vessel_name}</div>
-                        <div className="text-[11px] font-mono font-normal text-slate-400">
+                        <div className="text-[11px] font-mono font-normal text-[#899491]">
                           {v.vessel_code}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
+                      <TableCell className="text-xs text-[#5C6B68]">
                         {formatDateTime(v.eta)}
                       </TableCell>
                       <TableCell>
                         <Badge variant="priority" priority={v.priority} size="sm" />
                       </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-800">
+                      <TableCell className="text-xs font-medium text-[#102A27]">
                         {assignedBerth ? (
-                          <span className="inline-flex items-center gap-1 text-blue-700">
-                            <Anchor className="h-3 w-3 text-blue-600" />
+                          <span className="inline-flex items-center gap-1 text-[#004741]">
+                            <Anchor className="h-3 w-3 text-[#004741]" />
                             {assignedBerth.berth_code}
                           </span>
                         ) : (
-                          <span className="text-slate-400 italic">Unassigned</span>
+                          <span className="text-[#899491] italic">Unassigned</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-xs font-mono font-medium text-slate-700">
+                      <TableCell className="text-xs font-mono font-medium text-[#5C6B68]">
                         {v.expected_waiting_time > 0 ? (
                           <span className="text-amber-700 font-semibold">
                             +{formatDuration(v.expected_waiting_time)}
                           </span>
                         ) : (
-                          <span className="text-slate-400">0h</span>
+                          <span className="text-[#899491]">0h</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -275,7 +275,7 @@ export default function OperationsPage() {
                                 resource: v,
                               })
                             }
-                            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                            className="rounded p-1 text-[#899491] hover:bg-[#F0EDE4] hover:text-[#5C6B68] transition-colors"
                             title="Update Status / Reassign"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
@@ -285,7 +285,7 @@ export default function OperationsPage() {
                             <button
                               type="button"
                               onClick={() => handleDeleteVessel(v.id, v.vessel_name)}
-                              className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                              className="rounded p-1 text-[#899491] hover:bg-rose-50 hover:text-rose-600 transition-colors"
                               title="Delete vessel record (Admin only)"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -297,38 +297,38 @@ export default function OperationsPage() {
 
                     {/* Expandable Details Drawer/Row */}
                     {isExpanded && (
-                      <TableRow className="bg-slate-50/60 border-t border-slate-100">
+                      <TableRow className="bg-[#F7F6F2]/60 border-t border-[#F0EDE4]">
                         <TableCell colSpan={8} className="py-3 px-6">
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                             <div>
-                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-[#899491] block">
                                 Shipping Carrier
                               </span>
-                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                              <span className="font-semibold text-[#102A27] mt-0.5 block">
                                 {v.shipping_line}
                               </span>
                             </div>
                             <div>
-                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-[#899491] block">
                                 Cargo Specifications
                               </span>
-                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                              <span className="font-semibold text-[#102A27] mt-0.5 block">
                                 {(v.cargo_volume ?? 0).toLocaleString()} TEU ({v.cargo_type})
                               </span>
                             </div>
                             <div>
-                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-[#899491] block">
                                 Vessel Length
                               </span>
-                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                              <span className="font-semibold text-[#102A27] mt-0.5 block">
                                 {v.vessel_length} meters
                               </span>
                             </div>
                             <div>
-                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-[#899491] block">
                                 Estimated Departure (ETD)
                               </span>
-                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                              <span className="font-semibold text-[#102A27] mt-0.5 block">
                                 {formatDateTime(v.etd)}
                               </span>
                             </div>

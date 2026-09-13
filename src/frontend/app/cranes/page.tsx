@@ -47,10 +47,10 @@ export default function CranesPage() {
       allowedRoles={["admin", "operations", "viewer"]}
     >
       <AssetTabs />
-      <Card className="border-slate-200">
+      <Card className="border-[#E3E5E0]">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
-            <Cpu className="h-4 w-4 text-blue-600" />
+            <Cpu className="h-4 w-4 text-[#004741]" />
             <CardTitle>Crane Fleet Registry</CardTitle>
           </div>
           <CardDescription>
@@ -78,12 +78,12 @@ export default function CranesPage() {
                 const assignedBerth = berths.find((b) => b.id === c.assigned_berth_id);
                 return (
                   <TableRow key={c.id}>
-                    <TableCell className="font-bold text-slate-900">{c.crane_code}</TableCell>
-                    <TableCell className="text-slate-700 font-medium">{c.crane_name}</TableCell>
-                    <TableCell className="font-mono text-xs text-slate-800">
+                    <TableCell className="font-bold text-[#102A27]">{c.crane_code}</TableCell>
+                    <TableCell className="text-[#5C6B68] font-medium">{c.crane_name}</TableCell>
+                    <TableCell className="font-mono text-xs text-[#102A27]">
                       {c.capacity_per_hour} moves/hr
                     </TableCell>
-                    <TableCell className="text-xs text-slate-700">
+                    <TableCell className="text-xs text-[#5C6B68]">
                       {assignedBerth ? assignedBerth.berth_code : "Unassigned Rail"}
                     </TableCell>
                     <TableCell>
@@ -91,7 +91,7 @@ export default function CranesPage() {
                         {c.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-600">
+                    <TableCell className="text-xs text-[#5C6B68]">
                       {formatDateTime(c.available_from)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -105,7 +105,7 @@ export default function CranesPage() {
                           Update Status
                         </Button>
                       ) : (
-                        <span className="text-[11px] text-slate-400 italic">Read-Only</span>
+                        <span className="text-[11px] text-[#899491] italic">Read-Only</span>
                       )}
                     </TableCell>
                   </TableRow>

@@ -20,15 +20,15 @@ export function FormField({
 }: FormFieldProps) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label className="block text-xs font-semibold text-slate-700">
+      <label className="block text-xs font-semibold text-[#102A27]">
         {label}
-        {required && <span className="ml-1 text-rose-500">*</span>}
+        {required && <span className="ml-1 text-[#B94A48]">*</span>}
       </label>
       {description && (
-        <p className="text-[11px] text-slate-500">{description}</p>
+        <p className="text-[11px] text-[#5C6B68]">{description}</p>
       )}
       {children}
-      {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
+      {error && <p className="text-xs text-[#B94A48] font-medium">{error}</p>}
     </div>
   );
 }
@@ -42,7 +42,7 @@ export const Input = React.forwardRef<
       type={type}
       ref={ref}
       className={cn(
-        "flex h-9 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus-visible:border-blue-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400",
+        "flex h-9 w-full rounded-lg border border-[#D5D9D3] bg-white px-3 py-1.5 text-sm text-[#102A27] transition-colors placeholder:text-[#899491] focus-visible:border-[#004741] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#004741] disabled:cursor-not-allowed disabled:bg-[#F7F6F2] disabled:text-[#899491]",
         className
       )}
       {...props}
@@ -59,7 +59,7 @@ export const Select = React.forwardRef<
     <select
       ref={ref}
       className={cn(
-        "flex h-9 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm transition-colors focus-visible:border-blue-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400",
+        "flex h-9 w-full rounded-lg border border-[#D5D9D3] bg-white px-3 py-1.5 text-sm text-[#102A27] transition-colors focus-visible:border-[#004741] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#004741] disabled:cursor-not-allowed disabled:bg-[#F7F6F2] disabled:text-[#899491]",
         className
       )}
       {...props}
@@ -78,7 +78,7 @@ export const Textarea = React.forwardRef<
     <textarea
       ref={ref}
       className={cn(
-        "flex min-h-[80px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus-visible:border-blue-600 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400",
+        "flex min-h-[80px] w-full rounded-lg border border-[#D5D9D3] bg-white px-3 py-2 text-sm text-[#102A27] transition-colors placeholder:text-[#899491] focus-visible:border-[#004741] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#004741] disabled:cursor-not-allowed disabled:bg-[#F7F6F2] disabled:text-[#899491]",
         className
       )}
       {...props}

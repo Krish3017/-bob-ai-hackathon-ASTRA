@@ -23,7 +23,7 @@ export function AssetTabs() {
   const pathname = usePathname();
 
   return (
-    <div className="flex items-center gap-1 border-b border-slate-200 pb-2 mb-4">
+    <div className="flex items-center gap-1 border-b border-[#E3E5E0] pb-2 mb-4">
       {assetTabs.map((tab) => {
         const isActive = pathname === tab.href;
         const Icon = tab.icon;
@@ -32,10 +32,10 @@ export function AssetTabs() {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
               isActive
-                ? "bg-slate-900 text-white font-semibold shadow-xs"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                ? "bg-[#004741] text-white font-semibold shadow-sm"
+                : "text-[#5C6B68] hover:bg-[#E1EFEC] hover:text-[#004741]"
             )}
           >
             <Icon className="h-3.5 w-3.5" />

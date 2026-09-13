@@ -50,7 +50,6 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
 
   const [assetsOpen, setAssetsOpen] = useState(isAssetsActive);
 
-  // Grouped navigation structure
   const mainNavItems: NavItem[] = [
     {
       name: "Dashboard",
@@ -108,20 +107,38 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
   const visibleMainItems = mainNavItems.filter((item) => item.roles.includes(role));
   const visibleAdminItems = adminNavItems.filter((item) => item.roles.includes(role));
 
+  const roleLabel =
+    role === "admin"
+      ? "Port Admin"
+      : role === "operations"
+      ? "Ops Staff"
+      : "Viewer";
+
+  const roleIcon =
+    role === "admin" ? (
+      <ShieldCheck className="h-3 w-3 text-[#004741]" />
+    ) : role === "operations" ? (
+      <UserCheck className="h-3 w-3 text-[#2F7D8C]" />
+    ) : (
+      <Eye className="h-3 w-3 text-[#C58A2B]" />
+    );
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r border-slate-200 bg-white">
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-60 flex-col border-r border-[#E3E5E0] bg-white">
       {/* Brand Header */}
-      <div className="flex h-14 items-center justify-between border-b border-slate-100 px-5">
+      <div className="flex h-14 items-center border-b border-[#E3E5E0] px-5">
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-600 text-white shadow-2xs">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#004741] text-white shadow-sm">
             <Anchor className="h-4 w-4" />
           </div>
-          <span className="text-sm font-bold tracking-tight text-slate-900">
-            NaviOps
-          </span>
-          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
-            Port
-          </span>
+          <div>
+            <span className="block text-sm font-bold tracking-tight text-[#004741] leading-tight">
+              NaviOps
+            </span>
+            <span className="block text-[9px] font-medium tracking-widest uppercase text-[#899491] leading-tight">
+              Port Operations
+            </span>
+          </div>
         </Link>
       </div>
 
@@ -129,7 +146,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
         {/* Main Section */}
         <div>
-          <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#899491]">
             Main
           </div>
           <nav className="space-y-0.5">
@@ -144,25 +161,27 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
                       type="button"
                       onClick={() => setAssetsOpen(!assetsOpen)}
                       className={cn(
-                        "group flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                        "group flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-all",
                         isCurrentActive
-                          ? "bg-slate-100 text-slate-900 font-semibold"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          ? "bg-[#E1EFEC] text-[#004741] font-semibold"
+                          : "text-[#5C6B68] hover:bg-[#F7F6F2] hover:text-[#004741]"
                       )}
                     >
                       <div className="flex items-center gap-2.5 truncate">
                         <Icon
                           className={cn(
                             "h-4 w-4 shrink-0 transition-colors",
-                            isCurrentActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
+                            isCurrentActive
+                              ? "text-[#004741]"
+                              : "text-[#899491] group-hover:text-[#004741]"
                           )}
                         />
                         <span className="truncate">{item.name}</span>
                       </div>
                       {assetsOpen ? (
-                        <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                        <ChevronDown className="h-3.5 w-3.5 text-[#899491]" />
                       ) : (
-                        <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                        <ChevronRight className="h-3.5 w-3.5 text-[#899491]" />
                       )}
                     </button>
 
@@ -176,16 +195,16 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
                               key={child.href}
                               href={child.href}
                               className={cn(
-                                "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
+                                "flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-all",
                                 isChildActive
-                                  ? "bg-blue-50 text-blue-700 font-semibold"
-                                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                                  ? "bg-[#E1EFEC] text-[#004741] font-semibold"
+                                  : "text-[#5C6B68] hover:bg-[#F7F6F2] hover:text-[#004741]"
                               )}
                             >
                               <ChildIcon
                                 className={cn(
                                   "h-3.5 w-3.5 shrink-0",
-                                  isChildActive ? "text-blue-600" : "text-slate-400"
+                                  isChildActive ? "text-[#004741]" : "text-[#899491]"
                                 )}
                               />
                               <span className="truncate">{child.name}</span>
@@ -204,21 +223,19 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "group flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-all",
                     isActive
-                      ? "bg-blue-50 text-blue-700 font-semibold"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      ? "bg-[#E1EFEC] text-[#004741] font-semibold"
+                      : "text-[#5C6B68] hover:bg-[#F7F6F2] hover:text-[#004741]"
                   )}
                 >
-                  <div className="flex items-center gap-2.5 truncate">
-                    <Icon
-                      className={cn(
-                        "h-4 w-4 shrink-0 transition-colors",
-                        isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
-                      )}
-                    />
-                    <span className="truncate">{item.name}</span>
-                  </div>
+                  <Icon
+                    className={cn(
+                      "h-4 w-4 shrink-0 transition-colors",
+                      isActive ? "text-[#004741]" : "text-[#899491] group-hover:text-[#004741]"
+                    )}
+                  />
+                  <span className="truncate">{item.name}</span>
                 </Link>
               );
             })}
@@ -228,7 +245,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
         {/* Administration Section */}
         {visibleAdminItems.length > 0 && (
           <div>
-            <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-[#899491]">
               Administration
             </div>
             <nav className="space-y-0.5">
@@ -240,21 +257,19 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "group flex items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
+                      "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-all",
                       isActive
-                        ? "bg-blue-50 text-blue-700 font-semibold"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        ? "bg-[#E1EFEC] text-[#004741] font-semibold"
+                        : "text-[#5C6B68] hover:bg-[#F7F6F2] hover:text-[#004741]"
                     )}
                   >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <Icon
-                        className={cn(
-                          "h-4 w-4 shrink-0 transition-colors",
-                          isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
-                        )}
-                      />
-                      <span className="truncate">{item.name}</span>
-                    </div>
+                    <Icon
+                      className={cn(
+                        "h-4 w-4 shrink-0 transition-colors",
+                        isActive ? "text-[#004741]" : "text-[#899491] group-hover:text-[#004741]"
+                      )}
+                    />
+                    <span className="truncate">{item.name}</span>
                   </Link>
                 );
               })}
@@ -263,19 +278,20 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
         )}
       </div>
 
-      {/* User Footer Strip */}
-      <div className="border-t border-slate-100 p-3">
+      {/* User Footer */}
+      <div className="border-t border-[#E3E5E0] p-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 truncate">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">
+          <div className="flex items-center gap-2.5 truncate">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E1EFEC] text-xs font-bold text-[#004741] border border-[#C5DDD9]">
               {user?.full_name ? user.full_name.charAt(0).toUpperCase() : "U"}
             </div>
             <div className="truncate">
-              <div className="text-xs font-semibold text-slate-800 truncate">
+              <div className="text-xs font-semibold text-[#102A27] truncate">
                 {user?.full_name || "User"}
               </div>
-              <div className="text-[10px] text-slate-400 capitalize">
-                {role === "admin" ? "Port Admin" : role === "operations" ? "Ops Staff" : "Viewer"}
+              <div className="flex items-center gap-1 text-[10px] text-[#5C6B68]">
+                {roleIcon}
+                <span>{roleLabel}</span>
               </div>
             </div>
           </div>
@@ -283,7 +299,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
             type="button"
             onClick={onLogout}
             title="Sign out"
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            className="rounded-lg p-1.5 text-[#899491] hover:bg-[#FCE9E8] hover:text-[#B94A48] transition-colors"
           >
             <LogOut className="h-3.5 w-3.5" />
           </button>

@@ -3,11 +3,12 @@ import { cn } from "@/lib/utils";
 
 export function Table({
   className,
+  containerClassName,
   children,
   ...props
-}: React.HTMLAttributes<HTMLTableElement>) {
+}: React.HTMLAttributes<HTMLTableElement> & { containerClassName?: string }) {
   return (
-    <div className="relative w-full overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div className={cn("relative w-full overflow-x-auto", containerClassName)}>
       <table
         className={cn("w-full caption-bottom text-sm text-left", className)}
         {...props}
@@ -25,7 +26,10 @@ export function TableHeader({
 }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <thead
-      className={cn("bg-slate-50 border-b border-slate-200 text-xs text-slate-600 uppercase tracking-wider font-semibold", className)}
+      className={cn(
+        "bg-[#F7F6F2] border-b border-[#E3E5E0] text-[11px] text-[#5C6B68] uppercase tracking-wider font-semibold",
+        className
+      )}
       {...props}
     >
       {children}
@@ -40,7 +44,7 @@ export function TableBody({
 }: React.HTMLAttributes<HTMLTableSectionElement>) {
   return (
     <tbody
-      className={cn("divide-y divide-slate-100 bg-white", className)}
+      className={cn("divide-y divide-[#F0EDE4] bg-white", className)}
       {...props}
     >
       {children}
@@ -56,7 +60,7 @@ export function TableRow({
   return (
     <tr
       className={cn(
-        "transition-colors hover:bg-slate-50/80 data-[state=selected]:bg-slate-100",
+        "transition-colors hover:bg-[#F7F9F8] data-[state=selected]:bg-[#E1EFEC]",
         className
       )}
       {...props}
@@ -74,7 +78,7 @@ export function TableHead({
   return (
     <th
       className={cn(
-        "h-10 px-4 text-left align-middle font-semibold text-slate-700 select-none whitespace-nowrap",
+        "h-10 px-4 text-left align-middle font-semibold text-[#5C6B68] select-none whitespace-nowrap",
         className
       )}
       {...props}
@@ -91,7 +95,7 @@ export function TableCell({
 }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={cn("p-4 align-middle text-slate-700 whitespace-nowrap", className)}
+      className={cn("p-4 align-middle text-[#102A27] whitespace-nowrap", className)}
       {...props}
     >
       {children}
@@ -108,7 +112,10 @@ export function TableEmpty({
 }) {
   return (
     <TableRow>
-      <TableCell colSpan={colSpan} className="h-32 text-center text-slate-500 font-normal">
+      <TableCell
+        colSpan={colSpan}
+        className="h-32 text-center text-[#899491] font-normal"
+      >
         {message}
       </TableCell>
     </TableRow>

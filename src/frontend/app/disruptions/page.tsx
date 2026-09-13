@@ -74,8 +74,8 @@ export default function DisruptionsPage() {
       onRefresh={loadAll}
     >
       {/* Incident Actions Toolbar */}
-      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs mb-4">
-        <div className="text-xs font-semibold text-slate-800">
+      <div className="flex items-center justify-between rounded-xl border border-[#E3E5E0] bg-white p-3.5 shadow-card mb-4">
+        <div className="text-xs font-semibold text-[#102A27]">
           Active Incidents ({disruptions.filter((d) => d.status === "Active").length}) · Total ({disruptions.length})
         </div>
 
@@ -89,13 +89,13 @@ export default function DisruptionsPage() {
             Report New Incident
           </Button>
         ) : (
-          <div className="text-xs text-slate-400 font-medium italic">
+          <div className="text-xs text-[#899491] font-medium italic">
             Read-Only (Viewer Access)
           </div>
         )}
       </div>
 
-      <Card className="border-slate-200">
+      <Card className="border-[#E3E5E0]">
         <CardContent className="pt-4">
           <Table>
             <TableHeader>
@@ -115,16 +115,16 @@ export default function DisruptionsPage() {
               ) : (
                 disruptions.map((d) => (
                   <TableRow key={d.id}>
-                    <TableCell className="font-semibold text-slate-900">
+                    <TableCell className="font-semibold text-[#102A27]">
                       <div>{d.title}</div>
                       {d.description && (
-                        <div className="text-xs text-slate-500 font-normal max-w-sm line-clamp-1">
+                        <div className="text-xs text-[#5C6B68] font-normal max-w-sm line-clamp-1">
                           {d.description}
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-700">{d.disruption_type}</TableCell>
-                    <TableCell className="text-xs uppercase font-mono font-medium text-slate-800">
+                    <TableCell className="text-xs text-[#5C6B68]">{d.disruption_type}</TableCell>
+                    <TableCell className="text-xs uppercase font-mono font-medium text-[#102A27]">
                       {d.affected_resource_type}
                     </TableCell>
                     <TableCell>
@@ -132,7 +132,7 @@ export default function DisruptionsPage() {
                         {d.severity}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-600">{formatDateTime(d.start_time)}</TableCell>
+                    <TableCell className="text-xs text-[#5C6B68]">{formatDateTime(d.start_time)}</TableCell>
                     <TableCell>
                       <Badge variant="status" status={d.status}>
                         {d.status}
@@ -163,7 +163,7 @@ export default function DisruptionsPage() {
                           </Button>
                         )}
                         {currentRole === "viewer" && (
-                          <span className="text-[11px] text-slate-400 font-medium italic">
+                          <span className="text-[11px] text-[#899491] font-medium italic">
                             Read-Only
                           </span>
                         )}

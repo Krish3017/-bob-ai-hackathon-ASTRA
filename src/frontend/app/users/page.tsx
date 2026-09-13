@@ -101,29 +101,29 @@ export default function UsersPage() {
         <div className="space-y-6">
           {/* Summary KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-lg border border-[#E3E5E0] bg-white p-4 shadow-card">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#5C6B68] uppercase tracking-wider">
                   Total Accounts
                 </span>
-                <Users className="h-4 w-4 text-slate-400" />
+                <Users className="h-4 w-4 text-[#899491]" />
               </div>
-              <div className="mt-2 text-2xl font-bold text-slate-900">{users.length}</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Active directory records</div>
+              <div className="mt-2 text-2xl font-bold text-[#102A27]">{users.length}</div>
+              <div className="text-[11px] text-[#5C6B68] mt-0.5">Active directory records</div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-lg border border-[#E3E5E0] bg-white p-4 shadow-card">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[#004741] uppercase tracking-wider">
                   Port Managers
                 </span>
-                <ShieldCheck className="h-4 w-4 text-blue-600" />
+                <ShieldCheck className="h-4 w-4 text-[#004741]" />
               </div>
-              <div className="mt-2 text-2xl font-bold text-blue-700">{adminCount}</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Full CRUD & Approval authority</div>
+              <div className="mt-2 text-2xl font-bold text-[#004741]">{adminCount}</div>
+              <div className="text-[11px] text-[#5C6B68] mt-0.5">Full CRUD & Approval authority</div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-lg border border-[#E3E5E0] bg-white p-4 shadow-card">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
                   Operations Staff
@@ -131,10 +131,10 @@ export default function UsersPage() {
                 <UserCheck className="h-4 w-4 text-emerald-600" />
               </div>
               <div className="mt-2 text-2xl font-bold text-emerald-700">{opsCount}</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Control center & Solver run</div>
+              <div className="text-[11px] text-[#5C6B68] mt-0.5">Control center & Solver run</div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-lg border border-[#E3E5E0] bg-white p-4 shadow-card">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">
                   Viewers (Read-Only)
@@ -142,7 +142,7 @@ export default function UsersPage() {
                 <Eye className="h-4 w-4 text-amber-600" />
               </div>
               <div className="mt-2 text-2xl font-bold text-amber-700">{viewerCount}</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Executive & Stakeholder view</div>
+              <div className="text-[11px] text-[#5C6B68] mt-0.5">Executive & Stakeholder view</div>
             </div>
           </div>
 
@@ -150,10 +150,10 @@ export default function UsersPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
-                <CardTitle className="text-base font-semibold text-slate-900">
+                <CardTitle className="text-base font-semibold text-[#102A27]">
                   Personnel Directory & Privilege Matrix
                 </CardTitle>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-[#5C6B68] mt-0.5">
                   Promote new viewer signups to Operations or Administrator roles.
                 </p>
               </div>
@@ -172,19 +172,19 @@ export default function UsersPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search by personnel name, email, or department..."
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 pl-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full rounded-lg border border-[#D5D9D3] px-3 py-2 pl-9 text-sm text-[#102A27] placeholder:text-[#899491] focus:border-[#004741] focus:outline-none focus:ring-1 focus:ring-[#004741]"
                   />
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#899491]" />
                 </div>
 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                  <span className="text-xs font-medium text-[#5C6B68] whitespace-nowrap">
                     Role Filter:
                   </span>
                   <select
                     value={roleFilter}
                     onChange={(e) => setRoleFilter(e.target.value)}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 focus:border-blue-500 focus:outline-none"
+                    className="rounded-lg border border-[#D5D9D3] bg-white px-3 py-2 text-xs font-medium text-[#5C6B68] focus:border-[#004741] focus:outline-none"
                   >
                     <option value="all">All Roles ({users.length})</option>
                     <option value="admin">Admin ({adminCount})</option>
@@ -195,10 +195,10 @@ export default function UsersPage() {
               </div>
 
               {/* Users Table */}
-              <div className="rounded-lg border border-slate-200 overflow-hidden">
+              <div className="rounded-lg border border-[#E3E5E0] overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50/80">
+                    <TableRow className="bg-[#F7F6F2]/80">
                       <TableHead>User / Personnel</TableHead>
                       <TableHead>Department</TableHead>
                       <TableHead>Current Role</TableHead>
@@ -209,7 +209,7 @@ export default function UsersPage() {
                   <TableBody>
                     {filteredUsers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                        <TableCell colSpan={5} className="py-8 text-center text-[#899491] text-xs">
                           No personnel found matching the query.
                         </TableCell>
                       </TableRow>
@@ -219,29 +219,29 @@ export default function UsersPage() {
                         const isSaved = updateStatus[user.id] === "saved";
 
                         return (
-                          <TableRow key={user.id} className="hover:bg-slate-50/60 transition-colors">
+                          <TableRow key={user.id} className="hover:bg-[#F7F6F2]/60 transition-colors">
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 border border-slate-200">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F0EDE4] text-xs font-bold text-[#5C6B68] border border-[#E3E5E0]">
                                   {user.full_name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                  <div className="font-semibold text-slate-900 text-sm">
+                                  <div className="font-semibold text-[#102A27] text-sm">
                                     {user.full_name}
                                   </div>
-                                  <div className="text-xs text-slate-500">{user.email}</div>
+                                  <div className="text-xs text-[#5C6B68]">{user.email}</div>
                                 </div>
                               </div>
                             </TableCell>
 
-                            <TableCell className="text-xs font-medium text-slate-600">
+                            <TableCell className="text-xs font-medium text-[#5C6B68]">
                               {user.department || "Port Operations"}
                             </TableCell>
 
                             <TableCell>
                               {user.role === "admin" && (
                                 <Badge variant="status" status="Available" size="sm" className="gap-1 font-semibold">
-                                  <ShieldCheck className="h-3 w-3 text-blue-600" />
+                                  <ShieldCheck className="h-3 w-3 text-[#004741]" />
                                   Port Manager (Admin)
                                 </Badge>
                               )}
@@ -266,7 +266,7 @@ export default function UsersPage() {
                                   value={user.role}
                                   onChange={(e) => handleRoleUpdate(user.id, e.target.value)}
                                   disabled={isSaving}
-                                  className="rounded border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-800 shadow-2xs hover:border-slate-400 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                                  className="rounded border border-[#D5D9D3] bg-white px-2.5 py-1 text-xs font-medium text-[#102A27] shadow-2xs hover:border-[#D5D9D3] focus:border-[#004741] focus:outline-none disabled:opacity-50"
                                 >
                                   <option value="admin">Admin (Full Control)</option>
                                   <option value="operations">Operations Staff</option>
@@ -280,7 +280,7 @@ export default function UsersPage() {
                                   </span>
                                 )}
                                 {isSaving && (
-                                  <span className="text-[11px] text-slate-400">Saving...</span>
+                                  <span className="text-[11px] text-[#899491]">Saving...</span>
                                 )}
                               </div>
                             </TableCell>
@@ -299,32 +299,32 @@ export default function UsersPage() {
               </div>
 
               {/* RBAC Policy Reference Card */}
-              <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4 mt-6">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+              <div className="rounded-lg border border-[#E3E5E0] bg-[#F7F6F2]/70 p-4 mt-6">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#5C6B68] mb-2">
                   Role Privileges Reference
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 bg-white rounded border border-slate-200">
-                    <span className="font-semibold text-blue-700 flex items-center gap-1 mb-1">
+                  <div className="p-3 bg-white rounded border border-[#E3E5E0]">
+                    <span className="font-semibold text-[#004741] flex items-center gap-1 mb-1">
                       <ShieldCheck className="h-3.5 w-3.5" /> Port Manager / Admin
                     </span>
-                    <p className="text-slate-600 text-[11px]">
+                    <p className="text-[#5C6B68] text-[11px]">
                       Full system access. Create, edit, delete vessels, berths, cranes, yards, and disruptions. Approve and apply 72h optimization schedules. Manage users and roles.
                     </p>
                   </div>
-                  <div className="p-3 bg-white rounded border border-slate-200">
+                  <div className="p-3 bg-white rounded border border-[#E3E5E0]">
                     <span className="font-semibold text-emerald-700 flex items-center gap-1 mb-1">
                       <UserCheck className="h-3.5 w-3.5" /> Operations Staff
                     </span>
-                    <p className="text-slate-600 text-[11px]">
+                    <p className="text-[#5C6B68] text-[11px]">
                       Quayside control. Register incoming vessels, log active disruptions, trigger OR-Tools optimization solver. Cannot delete critical records or approve final schedule plans.
                     </p>
                   </div>
-                  <div className="p-3 bg-white rounded border border-slate-200">
+                  <div className="p-3 bg-white rounded border border-[#E3E5E0]">
                     <span className="font-semibold text-amber-700 flex items-center gap-1 mb-1">
                       <Eye className="h-3.5 w-3.5" /> Viewer / Executive
                     </span>
-                    <p className="text-slate-600 text-[11px]">
+                    <p className="text-[#5C6B68] text-[11px]">
                       Read-only access. Default role assigned upon public signup. Can view port KPIs, congestion indices, Gantt charts, and disruption logs without modification rights.
                     </p>
                   </div>

@@ -79,21 +79,21 @@ export default function VesselsPage() {
       <AssetTabs />
 
       {/* Action & Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs mb-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-[#E3E5E0] bg-white p-3.5 shadow-card mb-4">
         <div className="flex items-center gap-2">
           <div className="relative flex-1 sm:w-56">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#899491]" />
             <input
               type="text"
               placeholder="Search vessel or carrier..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-md border border-slate-200 bg-slate-50 pl-8 pr-2.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-[#D5D9D3] bg-[#F7F6F2] pl-8 pr-2.5 py-1.5 text-xs text-[#102A27] placeholder-[#899491] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#004741] focus:border-[#004741]"
             />
           </div>
 
           <select
-            className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+            className="rounded-lg border border-[#D5D9D3] bg-[#F7F6F2] px-2.5 py-1.5 text-xs font-medium text-[#5C6B68] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#004741] cursor-pointer"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           >
@@ -110,7 +110,7 @@ export default function VesselsPage() {
           <button
             type="button"
             onClick={() => setIsAddOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#004741] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#003B36] transition-colors cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Add Vessel</span>
@@ -119,7 +119,7 @@ export default function VesselsPage() {
       </div>
 
       {/* Vessel Fleet Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+      <div className="rounded-xl border border-[#E3E5E0] bg-white shadow-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -147,45 +147,45 @@ export default function VesselsPage() {
                   <React.Fragment key={v.id}>
                     <TableRow
                       className={cn(
-                        "cursor-pointer transition-colors hover:bg-slate-50/80",
-                        isExpanded && "bg-slate-50/50"
+                        "cursor-pointer transition-colors hover:bg-[#F7F9F8]",
+                        isExpanded && "bg-[#F7F6F2]"
                       )}
                       onClick={() => toggleRow(v.id)}
                     >
-                      <TableCell className="w-8 text-center text-slate-400">
+                      <TableCell className="w-8 text-center text-[#899491]">
                         {isExpanded ? (
                           <ChevronUp className="h-3.5 w-3.5 mx-auto" />
                         ) : (
                           <ChevronDown className="h-3.5 w-3.5 mx-auto" />
                         )}
                       </TableCell>
-                      <TableCell className="font-semibold text-slate-900">
+                      <TableCell className="font-semibold text-[#102A27]">
                         <div>{v.vessel_name}</div>
-                        <div className="text-[11px] font-mono font-normal text-slate-400">
+                        <div className="text-[11px] font-mono font-normal text-[#899491]">
                           {v.vessel_code}
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium text-slate-700 text-xs">
+                      <TableCell className="font-medium text-[#102A27] text-xs">
                         {v.shipping_line}
                       </TableCell>
-                      <TableCell className="text-slate-600 text-xs">{v.cargo_type}</TableCell>
+                      <TableCell className="text-[#5C6B68] text-xs">{v.cargo_type}</TableCell>
                       <TableCell className="font-mono text-xs">
                         {(v.cargo_volume ?? 0).toLocaleString()} TEU
                       </TableCell>
-                      <TableCell className="text-xs text-slate-600">
+                      <TableCell className="text-xs text-[#5C6B68]">
                         {v.eta ? formatDateTime(v.eta) : "Arrived"}
                       </TableCell>
                       <TableCell>
                         <Badge variant="priority" priority={v.priority} size="sm" />
                       </TableCell>
-                      <TableCell className="text-xs font-medium text-slate-800">
+                      <TableCell className="text-xs font-medium text-[#102A27]">
                         {assignedBerth ? (
-                          <span className="inline-flex items-center gap-1 text-blue-700">
-                            <Anchor className="h-3 w-3 text-blue-600" />
+                          <span className="inline-flex items-center gap-1 text-[#004741]">
+                            <Anchor className="h-3 w-3 text-[#004741]" />
                             {assignedBerth.berth_code}
                           </span>
                         ) : (
-                          <span className="text-slate-400 italic">Unassigned</span>
+                          <span className="text-[#899491] italic">Unassigned</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -199,7 +199,7 @@ export default function VesselsPage() {
                             <button
                               type="button"
                               onClick={() => setUpdateModal({ isOpen: true, vessel: v })}
-                              className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                              className="rounded p-1 text-[#899491] hover:bg-[#F0EDE4] hover:text-[#5C6B68] transition-colors"
                               title="Edit vessel operational status"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
@@ -209,14 +209,14 @@ export default function VesselsPage() {
                             <button
                               type="button"
                               onClick={() => handleDelete(v.id, v.vessel_name)}
-                              className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                              className="rounded p-1 text-[#899491] hover:bg-rose-50 hover:text-rose-600 transition-colors"
                               title="Delete vessel (Admin Only)"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
                           )}
                           {currentRole === "viewer" && (
-                            <span className="text-[11px] text-slate-400 italic">Read-Only</span>
+                            <span className="text-[11px] text-[#899491] italic">Read-Only</span>
                           )}
                         </div>
                       </TableCell>
@@ -224,40 +224,40 @@ export default function VesselsPage() {
 
                     {/* Expandable Specifications Row */}
                     {isExpanded && (
-                      <TableRow className="bg-slate-50/60 border-t border-slate-100">
+                      <TableRow className="bg-[#F7F6F2] border-t border-[#F0EDE4]">
                         <TableCell colSpan={10} className="py-3 px-6">
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                             <div>
-                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-[#899491] block">
                                 Vessel Length
                               </span>
-                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                              <span className="font-semibold text-[#102A27] mt-0.5 block">
                                 {v.vessel_length} meters
                               </span>
                             </div>
                             <div>
-                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-[#899491] block">
                                 Estimated Departure (ETD)
                               </span>
-                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                              <span className="font-semibold text-[#102A27] mt-0.5 block">
                                 {formatDateTime(v.etd)}
                               </span>
                             </div>
                             <div>
-                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-[#899491] block">
                                 Expected Wait Time
                               </span>
-                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                              <span className="font-semibold text-[#102A27] mt-0.5 block">
                                 {v.expected_waiting_time > 0
                                   ? formatDuration(v.expected_waiting_time)
                                   : "0 hours"}
                               </span>
                             </div>
                             <div>
-                              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 block">
+                              <span className="text-[10px] font-medium uppercase tracking-wider text-[#899491] block">
                                 Actual Arrival Time
                               </span>
-                              <span className="font-semibold text-slate-800 mt-0.5 block">
+                              <span className="font-semibold text-[#102A27] mt-0.5 block">
                                 {v.arrival_time ? formatDateTime(v.arrival_time) : "Pending Entry"}
                               </span>
                             </div>

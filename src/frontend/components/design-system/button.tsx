@@ -26,15 +26,21 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseClasses =
-      "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none rounded-md";
+      "inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#004741] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none rounded-lg";
 
     const variantClasses = {
-      primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-sm active:bg-blue-800",
-      secondary: "bg-slate-100 text-slate-800 hover:bg-slate-200 active:bg-slate-300 border border-slate-200",
-      outline: "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100",
-      destructive: "bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 shadow-sm",
-      ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-      link: "text-blue-600 underline-offset-4 hover:underline p-0 h-auto",
+      primary:
+        "bg-[#004741] text-white hover:bg-[#003B36] shadow-sm active:bg-[#002926]",
+      secondary:
+        "bg-[#F7F5F0] text-[#004741] hover:bg-[#E1EFEC] border border-[#D5D9D3] active:bg-[#C5DDD9]",
+      outline:
+        "border border-[#004741] bg-white text-[#004741] hover:bg-[#E1EFEC] active:bg-[#C5DDD9]",
+      destructive:
+        "bg-[#B94A48] text-white hover:bg-[#9E3C3A] active:bg-[#833230] shadow-sm",
+      ghost:
+        "text-[#5C6B68] hover:bg-[#F7F6F2] hover:text-[#004741]",
+      link:
+        "text-[#004741] underline-offset-4 hover:underline p-0 h-auto",
     }[variant];
 
     const sizeClasses = {

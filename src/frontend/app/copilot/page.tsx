@@ -216,12 +216,12 @@ export default function CopilotPage() {
       description="Live port telemetry-grounded operational assistant — responses sourced from real-time API data."
     >
       {/* Notice Banner */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-4 text-xs text-blue-900">
-        <div className="flex items-center gap-2 font-bold text-blue-900">
-          <Sparkles className="h-4 w-4 text-blue-600" />
+      <div className="rounded-xl border border-[#C5DDD9] bg-[#E1EFEC]/60 p-4 text-xs text-[#004741]">
+        <div className="flex items-center gap-2 font-bold text-[#004741]">
+          <Sparkles className="h-4 w-4 text-[#004741]" />
           <span>Live Data Integration Active — Responses sourced from NaviOps API</span>
         </div>
-        <p className="mt-1 text-slate-600">
+        <p className="mt-1 text-[#5C6B68]">
           Every Copilot reply queries <code>/api/dashboard/summary</code>, <code>/api/vessels</code>, and <code>/api/optimization/runs/latest</code> in real time.
           Vessel names, congestion scores, wait times, and crane counts reflect the actual current port state — not static templates.
           Phase 2 will replace this with a full IBM Watsonx.ai + LangGraph multi-agent pipeline using these same endpoints.
@@ -230,11 +230,11 @@ export default function CopilotPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chat Interface */}
-        <Card className="lg:col-span-2 border-slate-200 flex flex-col h-[580px]">
-          <CardHeader className="pb-3 border-b border-slate-100 flex-none">
+        <Card className="lg:col-span-2 border-[#E3E5E0] flex flex-col h-[580px]">
+          <CardHeader className="pb-3 border-b border-[#F0EDE4] flex-none">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bot className="h-5 w-5 text-blue-600" />
+                <Bot className="h-5 w-5 text-[#004741]" />
                 <CardTitle>Bob Copilot</CardTitle>
               </div>
               <Badge variant="status" status="Available">
@@ -249,7 +249,7 @@ export default function CopilotPage() {
           <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map((m, idx) => (
               <div key={idx} className={`flex flex-col ${m.sender === "user" ? "items-end" : "items-start"}`}>
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-1 px-1">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#899491] mb-1 px-1">
                   <span>{m.sender === "user" ? "Port Staff" : "Bob Copilot"}</span>
                   <span>·</span>
                   <span>{m.time}</span>
@@ -257,8 +257,8 @@ export default function CopilotPage() {
                 <div
                   className={`rounded-xl p-3.5 text-xs max-w-lg shadow-2xs leading-relaxed whitespace-pre-line ${
                     m.sender === "user"
-                      ? "bg-blue-600 text-white rounded-br-none"
-                      : "bg-slate-100 text-slate-800 rounded-bl-none border border-slate-200/80"
+                      ? "bg-[#004741] text-white rounded-br-none"
+                      : "bg-[#F0EDE4] text-[#102A27] rounded-bl-none border border-[#E3E5E0]/80"
                   }`}
                 >
                   {m.text}
@@ -267,11 +267,11 @@ export default function CopilotPage() {
             ))}
             {isThinking && (
               <div className="flex flex-col items-start">
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mb-1 px-1">
+                <div className="flex items-center gap-1.5 text-[10px] text-[#899491] mb-1 px-1">
                   <span>Bob Copilot</span><span>·</span><span>querying API…</span>
                 </div>
-                <div className="rounded-xl rounded-bl-none bg-slate-100 border border-slate-200/80 p-3.5 flex items-center gap-2 text-xs text-slate-500">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                <div className="rounded-xl rounded-bl-none bg-[#F0EDE4] border border-[#E3E5E0]/80 p-3.5 flex items-center gap-2 text-xs text-[#5C6B68]">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#2F7D8C]" />
                   <span>Fetching live port telemetry…</span>
                 </div>
               </div>
@@ -279,11 +279,11 @@ export default function CopilotPage() {
             <div ref={messagesEndRef} />
           </CardContent>
 
-          <CardFooter className="p-3 border-t border-slate-100 flex gap-2">
+          <CardFooter className="p-3 border-t border-[#F0EDE4] flex gap-2">
             <input
               type="text"
               placeholder="Ask about vessel delays, congestion, cranes, or optimization…"
-              className="flex-1 h-9 rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none"
+              className="flex-1 h-9 rounded-lg border border-[#D5D9D3] bg-white px-3 text-xs text-[#102A27] focus:border-[#004741] focus:outline-none"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -303,10 +303,10 @@ export default function CopilotPage() {
 
         {/* Sidebar: Suggested Questions + Agent Architecture */}
         <div className="space-y-6">
-          <Card className="border-slate-200">
+          <Card className="border-[#E3E5E0]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
-                <HelpCircle className="h-4 w-4 text-blue-600" />
+                <HelpCircle className="h-4 w-4 text-[#004741]" />
                 <CardTitle className="text-sm">Live Operational Queries</CardTitle>
               </div>
               <CardDescription>Each response queries the live API</CardDescription>
@@ -317,25 +317,25 @@ export default function CopilotPage() {
                   key={idx}
                   onClick={() => handleSend(q)}
                   disabled={isThinking}
-                  className="w-full text-left rounded-lg border border-slate-200 bg-slate-50/60 p-2.5 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors flex items-center justify-between group disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full text-left rounded-lg border border-[#E3E5E0] bg-[#F7F6F2]/60 p-2.5 text-xs text-[#5C6B68] hover:bg-[#E1EFEC] hover:text-[#004741] hover:border-[#C5DDD9] transition-colors flex items-center justify-between group disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>{q}</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                  <ArrowRight className="h-3.5 w-3.5 text-[#899491] group-hover:text-[#004741] transition-colors" />
                 </button>
               ))}
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200">
+          <Card className="border-[#E3E5E0]">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
-                <Terminal className="h-4 w-4 text-slate-700" />
+                <Terminal className="h-4 w-4 text-[#5C6B68]" />
                 <CardTitle className="text-sm">Phase 2 Agent Pipeline</CardTitle>
               </div>
               <CardDescription>Endpoints ready for LangGraph integration</CardDescription>
             </CardHeader>
-            <CardContent className="text-xs text-slate-600 space-y-2 pt-1">
-              <div className="rounded border border-slate-200 bg-slate-50 p-2 font-mono text-[11px] leading-relaxed">
+            <CardContent className="text-xs text-[#5C6B68] space-y-2 pt-1">
+              <div className="rounded border border-[#E3E5E0] bg-[#F7F6F2] p-2 font-mono text-[11px] leading-relaxed">
                 <div>1. Monitoring Agent → /api/dashboard/congestion</div>
                 <div>2. Impact Agent → /api/vessels + /api/cranes</div>
                 <div>3. Optimization Agent → POST /api/optimization/run</div>

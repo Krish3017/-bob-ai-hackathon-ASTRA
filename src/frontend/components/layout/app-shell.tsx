@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "./sidebar";
 import { Header } from "./header";
+import { MaritimeWatermark, WatermarkVariant } from "./maritime-watermark";
 import { User, UserRole } from "@/types";
 import { api, clearAuthToken, getAuthToken } from "@/lib/api";
 import { Anchor, ShieldAlert, ArrowLeft, LogOut, WifiOff } from "lucide-react";
@@ -17,6 +18,7 @@ interface AppShellProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   allowedRoles?: UserRole[];
+  watermarkVariant?: WatermarkVariant;
 }
 
 export function AppShell({
@@ -28,6 +30,7 @@ export function AppShell({
   onRefresh,
   isRefreshing,
   allowedRoles,
+  watermarkVariant,
 }: AppShellProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -39,12 +42,10 @@ export function AppShell({
 
     const token = getAuthToken();
     if (!token) {
-      // Force redirect to login page if no token exists
       router.replace("/login");
       return;
     }
 
-    // 1. Paint immediately with cached user if available
     const cachedUser = localStorage.getItem("naviops_user");
     if (cachedUser) {
       try {
@@ -56,7 +57,6 @@ export function AppShell({
       }
     }
 
-    // 2. Asynchronously verify token with backend
     api.getMe()
       .then((userData) => {
         setUser(userData);
@@ -66,14 +66,10 @@ export function AppShell({
         setNetworkWarning(null);
       })
       .catch((err: any) => {
-        // Only log out if backend explicitly rejected credentials with 401
         if (err?.status === 401 || err?.message?.includes("401") || err?.message?.includes("expired")) {
-          console.warn("Session token expired or invalid, redirecting to login:", err);
           clearAuthToken();
           router.replace("/login");
         } else {
-          // Network hiccup or 5xx: preserve session, do not log user out
-          console.warn("Backend connectivity issue (session preserved):", err?.message);
           setNetworkWarning("Working in cached offline mode. NaviOps backend is temporarily unreachable.");
           setIsLoadingAuth(false);
         }
@@ -85,17 +81,16 @@ export function AppShell({
     router.replace("/login");
   };
 
-  // Prevent flash of protected dashboard content before authentication check completes
   if (isLoadingAuth) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm animate-pulse mb-3">
-          <Anchor className="h-6 w-6" />
+      <div className="min-h-screen bg-[#FAFAF8] flex flex-col items-center justify-center p-6">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#004741] text-white shadow-card-md animate-pulse mb-4">
+          <Anchor className="h-7 w-7" />
         </div>
-        <div className="text-sm font-semibold text-slate-800">
+        <div className="text-sm font-semibold text-[#102A27]">
           Authenticating NaviOps Session...
         </div>
-        <div className="text-xs text-slate-400 mt-1">
+        <div className="text-xs text-[#5C6B68] mt-1">
           Verifying security credentials and access permissions
         </div>
       </div>
@@ -103,12 +98,10 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Fixed Left Navigation Sidebar */}
+    <div className="min-h-screen bg-[#FAFAF8] relative">
       <Sidebar user={user} onLogout={handleLogout} />
-
-      {/* Main Content Area */}
-      <div className="flex flex-col pl-60">
+      <div className="flex flex-col pl-60 relative min-h-screen">
+        <MaritimeWatermark variant={watermarkVariant} />
         <Header
           title={title}
           description={description}
@@ -119,24 +112,24 @@ export function AppShell({
           user={user}
           onLogout={handleLogout}
         />
-        <main className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
+        <main className="relative z-10 flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-5">
           {networkWarning && (
-            <div className="flex items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
-              <WifiOff className="h-4 w-4 text-amber-600 flex-none" />
+            <div className="flex items-center gap-2.5 rounded-xl border border-[#F0D49A] bg-[#FFF4DE] px-4 py-2.5 text-xs text-[#C58A2B]">
+              <WifiOff className="h-4 w-4 text-[#C58A2B] flex-none" />
               <span>{networkWarning}</span>
             </div>
           )}
           {allowedRoles && user && !allowedRoles.includes(user.role) ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 md:p-12 shadow-sm text-center max-w-2xl mx-auto my-12">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 shadow-xs mb-4">
+            <div className="rounded-2xl border border-[#E3E5E0] bg-white p-8 md:p-12 shadow-card text-center max-w-2xl mx-auto my-12">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF4DE] text-[#C58A2B] border border-[#F0D49A] mb-4">
                 <ShieldAlert className="h-7 w-7" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+              <h2 className="text-xl font-bold text-[#102A27] tracking-tight">
                 Access Restricted
               </h2>
-              <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+              <p className="mt-2 text-sm text-[#5C6B68] leading-relaxed">
                 This page requires{" "}
-                <span className="font-semibold text-slate-800">
+                <span className="font-semibold text-[#102A27]">
                   {allowedRoles
                     .map((r) =>
                       r === "admin"
@@ -149,18 +142,18 @@ export function AppShell({
                 </span>{" "}
                 privileges.
               </p>
-              <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3.5 py-1.5 text-xs text-slate-700">
+              <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#F7F6F2] border border-[#E3E5E0] px-3.5 py-1.5 text-xs text-[#5C6B68]">
                 <span>Authenticated Role:</span>
-                <span className="font-bold uppercase tracking-wider text-blue-700">
+                <span className="font-bold uppercase tracking-wider text-[#004741]">
                   {user.role}
                 </span>
-                <span className="text-slate-400">({user.email})</span>
+                <span className="text-[#899491]">({user.email})</span>
               </div>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => router.push("/")}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 transition cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#004741] px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#003B36] transition cursor-pointer"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Return to Overview
@@ -168,9 +161,9 @@ export function AppShell({
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#E3E5E0] bg-white px-4 py-2.5 text-xs font-semibold text-[#5C6B68] hover:bg-[#F7F6F2] transition cursor-pointer"
                 >
-                  <LogOut className="h-4 w-4 text-slate-400" />
+                  <LogOut className="h-4 w-4 text-[#899491]" />
                   Sign In with Different Account
                 </button>
               </div>

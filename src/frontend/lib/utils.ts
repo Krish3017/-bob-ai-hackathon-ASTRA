@@ -35,8 +35,8 @@ export function formatRelativeHours(isoString?: string | null): string {
   }
 }
 
-export function formatDuration(hours: number): string {
-  if (hours <= 0) return "0h";
+export function formatDuration(hours?: number | null): string {
+  if (!hours || isNaN(hours) || hours <= 0) return "0h";
   const h = Math.floor(hours);
   const m = Math.round((hours - h) * 60);
   if (m === 0) return `${h}h`;
@@ -48,54 +48,90 @@ export function getPriorityMeta(priority: number): { label: string; badgeClass: 
     case 1:
       return {
         label: "Priority 1 (Critical)",
-        badgeClass: "bg-rose-50 text-rose-700 border-rose-200 font-medium",
+        badgeClass: "bg-[#FCE9E8] text-[#B94A48] border-[#F2C4C3] font-medium",
       };
     case 2:
       return {
         label: "Priority 2 (High)",
-        badgeClass: "bg-amber-50 text-amber-800 border-amber-200 font-medium",
+        badgeClass: "bg-[#FFF4DE] text-[#C58A2B] border-[#F0D49A] font-medium",
       };
     case 3:
       return {
         label: "Priority 3 (Standard)",
-        badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+        badgeClass: "bg-[#E1F0F2] text-[#2F7D8C] border-[#B0D7DE] font-medium",
       };
     default:
       return {
         label: "Priority 4 (Low)",
-        badgeClass: "bg-slate-100 text-slate-700 border-slate-200",
+        badgeClass: "bg-[#F7F6F2] text-[#5C6B68] border-[#D5D9D3]",
       };
   }
 }
 
 export function getStatusMeta(status: string): { label: string; badgeClass: string } {
   const s = status.toLowerCase();
-  if (s === "available" || s === "completed" || s === "normal" || s === "optimal" || s === "resolved") {
+
+  // Green — positive operational states
+  if (
+    s === "available" ||
+    s === "completed" ||
+    s === "normal" ||
+    s === "optimal" ||
+    s === "resolved" ||
+    s === "applied"
+  ) {
     return {
-      label: status,
-      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      label: s === "applied" ? "Applied" : status,
+      badgeClass: "bg-[#E5F2EA] text-[#2F7D5B] border-[#A8D9BC]",
     };
   }
-  if (s === "occupied" || s === "busy" || s === "loading" || s === "unloading" || s === "berthing" || s === "active") {
+
+  // Cyprus teal — active/busy states
+  if (
+    s === "occupied" ||
+    s === "busy" ||
+    s === "loading" ||
+    s === "unloading" ||
+    s === "berthing" ||
+    s === "active" ||
+    s === "proposed"
+  ) {
     return {
-      label: status,
-      badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+      label: s === "proposed" ? "Proposed" : status,
+      badgeClass: "bg-[#E1EFEC] text-[#004741] border-[#C5DDD9]",
     };
   }
-  if (s === "waiting" || s === "maintenance" || s === "near capacity" || s === "feasible") {
+
+  // Amber — caution/degraded states
+  if (
+    s === "waiting" ||
+    s === "maintenance" ||
+    s === "near capacity" ||
+    s === "feasible" ||
+    s === "scheduled"
+  ) {
     return {
       label: status,
-      badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
+      badgeClass: "bg-[#FFF4DE] text-[#C58A2B] border-[#F0D49A]",
     };
   }
-  if (s === "failed" || s === "delayed" || s === "congested" || s === "critical" || s === "infeasible") {
+
+  // Red — critical/failed states
+  if (
+    s === "failed" ||
+    s === "delayed" ||
+    s === "congested" ||
+    s === "critical" ||
+    s === "infeasible"
+  ) {
     return {
       label: status,
-      badgeClass: "bg-rose-50 text-rose-700 border-rose-200",
+      badgeClass: "bg-[#FCE9E8] text-[#B94A48] border-[#F2C4C3]",
     };
   }
+
   return {
     label: status,
-    badgeClass: "bg-slate-100 text-slate-700 border-slate-200",
+    badgeClass: "bg-[#F7F6F2] text-[#5C6B68] border-[#D5D9D3]",
   };
 }
