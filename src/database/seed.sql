@@ -6,10 +6,10 @@
 -- =============================================================================
 
 -- 1. Users
-INSERT INTO users (id, email, full_name, role, department) VALUES
-    ('11111111-1111-1111-1111-111111111111', 'admin@naviops.port', 'Capt. Michael Vance', 'admin', 'Port Authority Executive'),
-    ('22222222-2222-2222-2222-222222222222', 'ops@naviops.port', 'Elena Rostova', 'operations', 'Quayside Operations Control'),
-    ('33333333-3333-3333-3333-333333333333', 'executive@naviops.port', 'David Chen', 'viewer', 'Maritime Logistics & Analytics');
+INSERT INTO users (id, email, full_name, role, department, password_hash) VALUES
+    ('11111111-1111-1111-1111-111111111111', 'admin@naviops.port', 'Capt. Michael Vance', 'admin', 'Port Authority Executive', 'naviopsport2026$d4911ef5139d94c7eb119cd888ae45158683293cfbd7906ce8e60bd92bfc6767'),
+    ('22222222-2222-2222-2222-222222222222', 'ops@naviops.port', 'Elena Rostova', 'operations', 'Quayside Operations Control', 'naviopsport2026$d4911ef5139d94c7eb119cd888ae45158683293cfbd7906ce8e60bd92bfc6767'),
+    ('33333333-3333-3333-3333-333333333333', 'executive@naviops.port', 'David Chen', 'viewer', 'Maritime Logistics & Analytics', 'naviopsport2026$d4911ef5139d94c7eb119cd888ae45158683293cfbd7906ce8e60bd92bfc6767');
 
 -- 2. Berths
 INSERT INTO berths (id, berth_code, berth_name, max_vessel_length, status, available_from) VALUES

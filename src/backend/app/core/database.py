@@ -1,13 +1,21 @@
 import os
+import hashlib
 import uuid
 import logging
 from decimal import Decimal
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Any, Optional
 
-import psycopg
-from psycopg.rows import dict_row
-from psycopg.types.json import Jsonb
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+    from psycopg.types.json import Jsonb
+    HAS_PSYCOPG = True
+except ImportError:
+    psycopg = None
+    dict_row = None
+    Jsonb = None
+    HAS_PSYCOPG = False
 
 from app.core.config import settings
 
@@ -101,6 +109,8 @@ class PortRepository:
 
     def get_connection(self):
         """Get or reuse a persistent connection to PostgreSQL with dict_row factory."""
+        if not HAS_PSYCOPG:
+            return None
         url = settings.clean_database_url
         if not url:
             return None
@@ -266,18 +276,19 @@ class PortRepository:
             cols_str = ", ".join(cols_present)
             placeholders = ", ".join(["%s"] * len(cols_present))
             update_str = ", ".join([f"{c} = EXCLUDED.{c}" for c in cols_present if c != "id"])
+            update_clause = f"DO UPDATE SET {update_str}" if update_str else "DO NOTHING"
 
             values = []
             for c in cols_present:
                 val = item_data[c]
                 if c in ("metrics_json", "assigned_cranes") and val is not None:
-                    val = Jsonb(val)
+                    val = Jsonb(val) if Jsonb else val
                 values.append(val)
 
             query = f"""
                 INSERT INTO {table_name} ({cols_str})
                 VALUES ({placeholders})
-                ON CONFLICT (id) DO UPDATE SET {update_str}
+                ON CONFLICT (id) {update_clause}
             """
             with conn.cursor() as cur:
                 cur.execute(query, values)
@@ -312,18 +323,19 @@ class PortRepository:
                     cols_str = ", ".join(cols_present)
                     placeholders = ", ".join(["%s"] * len(cols_present))
                     update_str = ", ".join([f"{c} = EXCLUDED.{c}" for c in cols_present if c != "id"])
+                    update_clause = f"DO UPDATE SET {update_str}" if update_str else "DO NOTHING"
 
                     values = []
                     for c in cols_present:
                         val = item_data[c]
                         if c in ("metrics_json", "assigned_cranes") and val is not None:
-                            val = Jsonb(val)
+                            val = Jsonb(val) if Jsonb else val
                         values.append(val)
 
                     query = f"""
                         INSERT INTO {table_name} ({cols_str})
                         VALUES ({placeholders})
-                        ON CONFLICT (id) DO UPDATE SET {update_str}
+                        ON CONFLICT (id) {update_clause}
                     """
                     cur.execute(query, values)
         except Exception as e:
@@ -332,7 +344,7 @@ class PortRepository:
 
     def delete_item(self, table_name: str, item_id: str):
         """Delete a record from Supabase PostgreSQL."""
-        if not self.is_connected or not settings.clean_database_url:
+        if not self.is_connected or not settings.clean_database_url or table_name not in TABLE_COLUMNS:
             return
 
         try:
@@ -345,9 +357,24 @@ class PortRepository:
             logger.error(f"Error deleting from {table_name}: {e}")
             raise RuntimeError(f"Database delete failed for {table_name}: {e}") from e
 
+    def reset_all_data(self):
+        """Pristine reset: clear all in-memory tables and reseed defaults."""
+        self.users.clear()
+        self.berths.clear()
+        self.cranes.clear()
+        self.vessels.clear()
+        self.yards.clear()
+        self.disruptions.clear()
+        self.optimization_runs.clear()
+        self.schedules.clear()
+        self.seed_defaults()
+
     def seed_defaults(self):
         """Initial baseline defaults if database is not yet seeded."""
         now = datetime.now(timezone.utc)
+
+        from app.core.auth import hash_password
+        default_pwd_hash = hash_password("admin123")
 
         # 1. Users
         users_seed = [
@@ -357,6 +384,7 @@ class PortRepository:
                 "full_name": "Capt. Michael Vance",
                 "role": "admin",
                 "department": "Port Authority Executive",
+                "password_hash": default_pwd_hash,
                 "created_at": now - timedelta(days=30)
             },
             {
@@ -365,6 +393,7 @@ class PortRepository:
                 "full_name": "Elena Rostova",
                 "role": "operations",
                 "department": "Quayside Operations Control",
+                "password_hash": default_pwd_hash,
                 "created_at": now - timedelta(days=20)
             },
             {
@@ -373,6 +402,7 @@ class PortRepository:
                 "full_name": "David Chen",
                 "role": "viewer",
                 "department": "Maritime Logistics & Analytics",
+                "password_hash": default_pwd_hash,
                 "created_at": now - timedelta(days=10)
             }
         ]

@@ -22,6 +22,7 @@ CREATE TABLE users (
     full_name VARCHAR(150) NOT NULL,
     role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'operations', 'viewer')),
     department VARCHAR(100) DEFAULT 'Port Operations',
+    password_hash TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

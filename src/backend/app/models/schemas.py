@@ -20,7 +20,7 @@ class UserResponse(UserBase):
 
 class LoginRequest(BaseModel):
     email: str
-    password: Optional[str] = "admin123"
+    password: str = Field(..., min_length=1, description="User password")
     role: Optional[str] = None
 
 

@@ -16,12 +16,16 @@ import { Cpu, Edit2, AlertCircle } from "lucide-react";
 export default function CranesPage() {
   const [cranes, setCranes] = useState<Crane[]>([]);
   const [berths, setBerths] = useState<Berth[]>([]);
+  const [currentRole, setCurrentRole] = useState<string>("viewer");
   const [updateModal, setUpdateModal] = useState<{ isOpen: boolean; crane: Crane | null }>({
     isOpen: false,
     crane: null,
   });
 
   const loadCranes = async () => {
+    if (typeof window !== "undefined") {
+      setCurrentRole(localStorage.getItem("naviops_role") || "viewer");
+    }
     try {
       const [cList, bList] = await Promise.all([api.getCranes(), api.getBerths()]);
       setCranes(cList);
@@ -40,7 +44,7 @@ export default function CranesPage() {
       title="Asset Directory: STS Cranes"
       description="Quay crane operational readiness, hourly handling rates, and maintenance telemetry."
       onRefresh={loadCranes}
-      allowedRoles={["admin", "operations"]}
+      allowedRoles={["admin", "operations", "viewer"]}
     >
       <AssetTabs />
       <Card className="border-slate-200">
@@ -91,14 +95,18 @@ export default function CranesPage() {
                       {formatDateTime(c.available_from)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setUpdateModal({ isOpen: true, crane: c })}
-                        leftIcon={<Edit2 className="h-3.5 w-3.5" />}
-                      >
-                        Update Status
-                      </Button>
+                      {currentRole !== "viewer" ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setUpdateModal({ isOpen: true, crane: c })}
+                          leftIcon={<Edit2 className="h-3.5 w-3.5" />}
+                        >
+                          Update Status
+                        </Button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Read-Only</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 );

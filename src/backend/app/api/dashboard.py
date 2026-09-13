@@ -82,5 +82,5 @@ def get_dashboard_summary(current_user: UserResponse = Depends(get_current_user)
 @router.post("/reset-demo", response_model=Dict[str, Any])
 def reset_demo_data(current_user: UserResponse = Depends(require_role(["admin", "operations"]))):
     """Reset operational database back to pristine initial synthetic state"""
-    port_repo.seed_defaults()
+    port_repo.reset_all_data()
     return {"status": "success", "message": "Demo data restored to initial state."}
