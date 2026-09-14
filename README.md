@@ -7,7 +7,7 @@
 | Field | Value |
 |---|---|
 | **Team Name** | ASTRA |
-| **Track** | Logistics & Ports |
+| **Track** | AI |
 | **Team Lead** | Sarthak Talaviya — 24dcs131@charusat.edu.in |
 | **Members** | Krish Ramanandi, Harshit Pambhar, Smit Sureja |
 
