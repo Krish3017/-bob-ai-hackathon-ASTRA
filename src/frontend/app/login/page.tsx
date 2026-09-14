@@ -55,21 +55,33 @@ export default function LoginPage() {
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginEmail || !loginPassword) {
+    const cleanEmail = loginEmail.trim();
+    const cleanPassword = loginPassword.trim();
+    if (!cleanEmail || !cleanPassword) {
       setError("Please enter both email and password.");
       return;
     }
     setIsLoading(true);
     setError(null);
     try {
-      const res = await api.login(loginEmail, loginPassword);
+      // Auto-normalize @naviops.com to @naviops.port for demo accounts
+      const normalizedEmail = cleanEmail.toLowerCase().endsWith("@naviops.com")
+        ? cleanEmail.slice(0, -4) + ".port"
+        : cleanEmail;
+
+      const res = await api.login(normalizedEmail, cleanPassword);
       setAuthToken(res.token);
       localStorage.setItem("naviops_token", res.token);
       localStorage.setItem("naviops_role", res.user.role);
       localStorage.setItem("naviops_user", JSON.stringify(res.user));
       window.location.href = "/";
     } catch (err: any) {
-      setError(err.message || "Login failed. Please verify credentials.");
+      const msg = err.message || "Invalid email or password.";
+      setError(
+        msg.includes("Invalid email or password")
+          ? "Invalid email or password. Use demo account (e.g. admin@naviops.port / admin123) or click a 1-Click Demo Persona below."
+          : msg
+      );
       setIsLoading(false);
     }
   };

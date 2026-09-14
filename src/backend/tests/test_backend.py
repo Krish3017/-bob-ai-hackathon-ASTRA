@@ -287,3 +287,57 @@ def test_prevent_demoting_only_admin():
     )
     assert res.status_code == 400
     assert "Cannot demote the only remaining administrator" in res.json()["detail"]
+
+
+def test_admin_create_user():
+    admin_token = create_access_token({"sub": "11111111-1111-1111-1111-111111111111", "email": "admin@naviops.port", "role": "admin"})
+    viewer_token = create_access_token({"sub": "33333333-3333-3333-3333-333333333333", "email": "executive@naviops.port", "role": "viewer"})
+
+    # Non-admin forbidden
+    res_forbidden = client.post(
+        "/api/auth/users",
+        json={
+            "email": "unauth@naviops.port",
+            "password": "password123",
+            "full_name": "Unauthorized User",
+            "role": "operations"
+        },
+        headers={"Authorization": f"Bearer {viewer_token}"}
+    )
+    assert res_forbidden.status_code == 403
+
+    # Admin successfully creates user
+    test_email = "test.officer@naviops.port"
+    res = client.post(
+        "/api/auth/users",
+        json={
+            "email": test_email,
+            "password": "securepassword123",
+            "full_name": "Chief Officer Alex",
+            "department": "Berth Management",
+            "role": "operations"
+        },
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert res.status_code == 201
+    data = res.json()
+    assert data["email"] == test_email
+    assert data["role"] == "operations"
+    assert data["full_name"] == "Chief Officer Alex"
+    assert data["department"] == "Berth Management"
+    assert "id" in data
+
+    # Verify duplicate email rejected
+    res_dup = client.post(
+        "/api/auth/users",
+        json={
+            "email": test_email,
+            "password": "securepassword123",
+            "full_name": "Duplicate User",
+            "role": "viewer"
+        },
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert res_dup.status_code == 400
+    assert "already registered" in res_dup.json()["detail"]
+

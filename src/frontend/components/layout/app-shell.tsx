@@ -79,6 +79,17 @@ export function AppShell({
       });
   }, [router]);
 
+  useEffect(() => {
+    const handleUserUpdated = (e: Event) => {
+      const customEvt = e as CustomEvent<User>;
+      if (customEvt.detail) {
+        setUser(customEvt.detail);
+      }
+    };
+    window.addEventListener("naviops_user_updated", handleUserUpdated);
+    return () => window.removeEventListener("naviops_user_updated", handleUserUpdated);
+  }, []);
+
   const handleLogout = () => {
     clearAuthToken();
     router.replace("/login");

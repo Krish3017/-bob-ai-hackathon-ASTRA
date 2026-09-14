@@ -1,15 +1,31 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Users, ShieldCheck, UserCheck, Eye, ShieldAlert, CheckCircle2, Search, ArrowRight, UserPlus } from "lucide-react";
+import {
+  Users,
+  ShieldCheck,
+  UserCheck,
+  Eye,
+  CheckCircle2,
+  Search,
+  UserPlus,
+  User as UserIcon,
+  Mail,
+  Lock,
+  Building,
+  Shield,
+  Check,
+  X,
+  AlertCircle,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardHeader, CardTitle, CardContent } from "@/design-system/card";
 import { Badge } from "@/design-system/badge";
 import { Button } from "@/design-system/button";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/design-system/table";
+import { Modal } from "@/design-system/modal";
 import { api } from "@/lib/api";
 import { User, UserRole } from "@/types";
-import Link from "next/link";
 import { useToast } from "@/components/design-system/toast";
 import { useConfirm } from "@/components/design-system/confirm-dialog";
 
@@ -20,18 +36,29 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [updateStatus, setUpdateStatus] = useState<{ [userId: string]: string }>({});
-  const [error, setError] = useState<string | null>(null);
   const toast = useToast();
   const confirm = useConfirm();
 
+  // ── Modal states ──
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  // ── Create user form state ──
+  const [createName, setCreateName] = useState("");
+  const [createEmail, setCreateEmail] = useState("");
+  const [createDept, setCreateDept] = useState("Quayside Operations");
+  const [createPassword, setCreatePassword] = useState("");
+  const [createRole, setCreateRole] = useState<UserRole>("operations");
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const fetchUsersData = async () => {
     setIsLoading(true);
-    setError(null);
     try {
       const userList = await api.getUsers();
       setUsers(userList);
     } catch (err: any) {
-      setError(err.message || "Failed to load personnel directory.");
+      toast.error("Error", err.message || "Failed to load personnel directory.");
     } finally {
       setIsLoading(false);
     }
@@ -45,6 +72,59 @@ export default function UsersPage() {
     fetchUsersData();
   }, []);
 
+  // ── Create User Handler ──
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanName = createName.trim();
+    const cleanEmail = createEmail.trim();
+    const cleanPassword = createPassword.trim();
+    const cleanDept = createDept.trim();
+
+    if (!cleanName || !cleanEmail || !cleanPassword) {
+      setCreateError("Please fill out all required fields.");
+      return;
+    }
+
+    if (cleanPassword.length < 6) {
+      setCreateError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    setIsCreating(true);
+    setCreateError(null);
+
+    try {
+      const newUser = await api.adminCreateUser({
+        full_name: cleanName,
+        email: cleanEmail,
+        department: cleanDept || "Port Operations",
+        password: cleanPassword,
+        role: createRole,
+      });
+
+      // Instantly add to frontend table
+      setUsers((prev) => [newUser, ...prev]);
+
+      toast.success(
+        "Personnel Registered",
+        `${newUser.full_name} was successfully created with role ${newUser.role.toUpperCase()}.`
+      );
+
+      // Reset & close modal
+      setIsCreateModalOpen(false);
+      setCreateName("");
+      setCreateEmail("");
+      setCreateDept("Quayside Operations");
+      setCreatePassword("");
+      setCreateRole("operations");
+    } catch (err: any) {
+      setCreateError(err.message || "Failed to register user account.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // ── Role Update Handler ──
   const handleRoleUpdate = async (userId: string, newRole: string) => {
     const userToUpdate = users.find((u) => u.id === userId);
     const confirmed = await confirm({
@@ -60,12 +140,19 @@ export default function UsersPage() {
     setUpdateStatus((prev) => ({ ...prev, [userId]: "saving" }));
     try {
       const updated = await api.updateUserRole(userId, newRole);
+
+      // 1. Update in the directory table list
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: updated.role } : u)));
+
+      // 2. If inspecting this user in profile modal, update profile modal view
+      setSelectedUser((prev) => (prev && prev.id === userId ? { ...prev, role: updated.role } : prev));
+
       setUpdateStatus((prev) => ({ ...prev, [userId]: "saved" }));
       toast.success(
         "User role updated",
-        `${userToUpdate?.full_name || "User"}'s role changed to ${newRole}.`
+        `${userToUpdate?.full_name || "User"}'s role is now ${newRole.toUpperCase()}.`
       );
+
       setTimeout(() => {
         setUpdateStatus((prev) => {
           const next = { ...prev };
@@ -74,14 +161,17 @@ export default function UsersPage() {
         });
       }, 2000);
 
-      // If user modified their own account
+      // 3. If user modified their own account, update session & notify AppShell
       const currentUserStr = localStorage.getItem("naviops_user");
       if (currentUserStr) {
         try {
           const current = JSON.parse(currentUserStr);
           if (current.id === userId) {
+            const updatedCurrent = { ...current, role: newRole };
+            localStorage.setItem("naviops_user", JSON.stringify(updatedCurrent));
             localStorage.setItem("naviops_role", newRole);
             setCurrentRole(newRole as UserRole);
+            window.dispatchEvent(new CustomEvent("naviops_user_updated", { detail: updatedCurrent }));
           }
         } catch {
           // ignore
@@ -176,12 +266,19 @@ export default function UsersPage() {
                   Promote new viewer signups to Operations or Administrator roles.
                 </p>
               </div>
-              <Link href="/login">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-                  <UserPlus className="h-3.5 w-3.5" />
-                  Sign Up New User
-                </Button>
-              </Link>
+              {/* In-page User Registration Button */}
+              <Button
+                variant="primary"
+                size="sm"
+                className="gap-1.5 text-xs bg-[#004741] text-white hover:bg-[#003833]"
+                onClick={() => {
+                  setCreateError(null);
+                  setIsCreateModalOpen(true);
+                }}
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                Sign Up New User
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -222,7 +319,7 @@ export default function UsersPage() {
                       <TableHead>Department</TableHead>
                       <TableHead>Current Role</TableHead>
                       <TableHead>Role Management (Admin Action)</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -240,17 +337,22 @@ export default function UsersPage() {
                         return (
                           <TableRow key={user.id} className="hover:bg-[#F7F6F2]/60 transition-colors">
                             <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F0EDE4] text-xs font-bold text-[#5C6B68] border border-[#E3E5E0]">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedUser(user)}
+                                className="flex items-center gap-3 text-left group focus:outline-none"
+                                title="Click to view detailed profile"
+                              >
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F0EDE4] text-xs font-bold text-[#004741] border border-[#E3E5E0] group-hover:bg-[#E1EFEC] group-hover:border-[#C5DDD9] transition-colors">
                                   {user.full_name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                  <div className="font-semibold text-[#102A27] text-sm">
+                                  <div className="font-semibold text-[#102A27] text-sm group-hover:text-[#004741] transition-colors">
                                     {user.full_name}
                                   </div>
                                   <div className="text-xs text-[#5C6B68]">{user.email}</div>
                                 </div>
-                              </div>
+                              </button>
                             </TableCell>
 
                             <TableCell className="text-xs font-medium text-[#5C6B68]">
@@ -304,9 +406,15 @@ export default function UsersPage() {
                             </TableCell>
 
                             <TableCell className="text-right">
-                              <Badge variant="status" status="Active" context="user" size="sm">
-                                Active
-                              </Badge>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedUser(user)}
+                                className="h-7 text-xs gap-1.5 text-[#004741] border-[#C5DDD9] hover:bg-[#E1EFEC]"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                View Profile
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -352,6 +460,321 @@ export default function UsersPage() {
           </Card>
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      {/*              MODAL: REGISTER NEW USER / PERSONNEL               */}
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          if (!isCreating) {
+            setIsCreateModalOpen(false);
+            setCreateError(null);
+          }
+        }}
+        title="Register New Port Personnel"
+        description="Create a new personnel account with immediate role privileges. Stays within your admin session."
+        maxWidth="md"
+      >
+        <form onSubmit={handleCreateUser} className="space-y-4 pt-1">
+          {createError && (
+            <div className="flex items-start gap-2 rounded-xl border border-[#F2C4C3] bg-[#FCE9E8] p-3 text-xs text-[#B94A48]">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{createError}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-[#102A27] mb-1">
+              Full Name <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="e.g. Capt. Sarah Jenkins"
+                className="w-full rounded-lg border border-[#D5D9D3] bg-white py-2 pl-9 pr-3 text-xs text-[#102A27] placeholder:text-[#899491] focus:border-[#004741] focus:outline-none focus:ring-1 focus:ring-[#004741]"
+              />
+              <UserIcon className="absolute left-3 top-2.5 h-4 w-4 text-[#899491]" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#102A27] mb-1">
+              Email Address <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                required
+                value={createEmail}
+                onChange={(e) => setCreateEmail(e.target.value)}
+                placeholder="e.g. sjenkins@naviops.port"
+                className="w-full rounded-lg border border-[#D5D9D3] bg-white py-2 pl-9 pr-3 text-xs text-[#102A27] placeholder:text-[#899491] focus:border-[#004741] focus:outline-none focus:ring-1 focus:ring-[#004741]"
+              />
+              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[#899491]" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#102A27] mb-1">
+              Department
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={createDept}
+                onChange={(e) => setCreateDept(e.target.value)}
+                placeholder="e.g. Quayside Operations Control"
+                className="w-full rounded-lg border border-[#D5D9D3] bg-white py-2 pl-9 pr-3 text-xs text-[#102A27] placeholder:text-[#899491] focus:border-[#004741] focus:outline-none focus:ring-1 focus:ring-[#004741]"
+              />
+              <Building className="absolute left-3 top-2.5 h-4 w-4 text-[#899491]" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#102A27] mb-1">
+              Password <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={createPassword}
+                onChange={(e) => setCreatePassword(e.target.value)}
+                placeholder="At least 6 characters"
+                className="w-full rounded-lg border border-[#D5D9D3] bg-white py-2 pl-9 pr-3 text-xs text-[#102A27] placeholder:text-[#899491] focus:border-[#004741] focus:outline-none focus:ring-1 focus:ring-[#004741]"
+              />
+              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-[#899491]" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#102A27] mb-1">
+              Initial Operational Role
+            </label>
+            <select
+              value={createRole}
+              onChange={(e) => setCreateRole(e.target.value as UserRole)}
+              className="w-full rounded-lg border border-[#D5D9D3] bg-white px-3 py-2 text-xs font-medium text-[#102A27] focus:border-[#004741] focus:outline-none focus:ring-1 focus:ring-[#004741]"
+            >
+              <option value="operations">Operations Staff (Quayside control & solver execution)</option>
+              <option value="admin">Port Manager / Admin (Full CRUD & approvals)</option>
+              <option value="viewer">Viewer (Read-only metrics & dashboard access)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#F0EDE4]">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCreateModalOpen(false)}
+              disabled={isCreating}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={isCreating}
+              className="gap-1.5 bg-[#004741] text-white hover:bg-[#003833]"
+            >
+              {isCreating ? (
+                <>Registering Personnel...</>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Create User
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      {/*            MODAL: PERSONNEL PROFILE & OPERATIONAL CLEARANCES     */}
+      {/* ══════════════════════════════════════════════════════════════════ */}
+      {selectedUser && (
+        <Modal
+          isOpen={!!selectedUser}
+          onClose={() => setSelectedUser(null)}
+          title="Personnel Profile & Clearances"
+          description="Detailed operational profile, security privileges, and live role assignment."
+          maxWidth="md"
+        >
+          <div className="space-y-4 pt-1">
+            {/* Header Badge & Identity */}
+            <div className="flex items-center gap-3.5 p-3.5 bg-[#F7F6F2] rounded-xl border border-[#E3E5E0]">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#004741] text-base font-bold text-white shadow-sm">
+                {selectedUser.full_name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-[#102A27] text-sm truncate">
+                    {selectedUser.full_name}
+                  </h3>
+                  {selectedUser.role === "admin" && (
+                    <Badge variant="role" role="admin" size="sm" className="gap-1 font-semibold">
+                      <ShieldCheck className="h-3 w-3 text-[#004741]" />
+                      Port Manager (Admin)
+                    </Badge>
+                  )}
+                  {selectedUser.role === "operations" && (
+                    <Badge variant="role" role="operations" size="sm" className="gap-1 font-semibold">
+                      <UserCheck className="h-3 w-3 text-[#2F7D8C]" />
+                      Operations Staff
+                    </Badge>
+                  )}
+                  {selectedUser.role === "viewer" && (
+                    <Badge variant="role" role="viewer" size="sm" className="gap-1 font-medium">
+                      <Eye className="h-3 w-3 text-[#5C6B68]" />
+                      Viewer (Read-Only)
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-xs text-[#5C6B68] mt-0.5">{selectedUser.email}</div>
+                <div className="text-[11px] text-[#899491] flex items-center gap-1 mt-0.5">
+                  <Building className="h-3 w-3" />
+                  {selectedUser.department || "Port Operations"}
+                </div>
+              </div>
+            </div>
+
+            {/* Account Details */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 bg-white rounded-lg border border-[#E3E5E0]">
+                <span className="text-[10px] uppercase font-bold text-[#899491] block">
+                  Account ID
+                </span>
+                <span className="font-mono text-[11px] text-[#102A27] truncate block mt-0.5">
+                  {selectedUser.id}
+                </span>
+              </div>
+              <div className="p-2.5 bg-white rounded-lg border border-[#E3E5E0]">
+                <span className="text-[10px] uppercase font-bold text-[#899491] block">
+                  Member Status
+                </span>
+                <span className="font-medium text-emerald-700 flex items-center gap-1 mt-0.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Active Personnel
+                </span>
+              </div>
+            </div>
+
+            {/* Live Role Privilege Checklist */}
+            <div className="rounded-lg border border-[#E3E5E0] bg-white p-3 space-y-2 text-xs">
+              <div className="font-semibold text-[#102A27] flex items-center gap-1.5">
+                <Shield className="h-3.5 w-3.5 text-[#004741]" />
+                Operational Clearances & Permissions:
+              </div>
+
+              <div className="space-y-1.5 pt-1 text-[11px]">
+                {selectedUser.role === "admin" && (
+                  <>
+                    <div className="flex items-center gap-2 text-[#102A27]">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>Full CRUD Authority:</strong> Vessels, Berths, Cranes, Yards, Disruptions</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#102A27]">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>Optimization Schedule Approval:</strong> Authority to approve & apply 72h plans</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#102A27]">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>Personnel Administration:</strong> Register users & modify security roles</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#102A27]">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>Bob Copilot Super-User:</strong> Live operational queries & optimization runs</span>
+                    </div>
+                  </>
+                )}
+
+                {selectedUser.role === "operations" && (
+                  <>
+                    <div className="flex items-center gap-2 text-[#102A27]">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>Quayside Control:</strong> Update vessel turnaround & status in real-time</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#102A27]">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>CP-SAT Solver Execution:</strong> Trigger optimization runs to generate proposed schedules</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#102A27]">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>Disruption Reporting:</strong> Log crane outages, maintenance & adverse weather</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#899491]">
+                      <X className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                      <span><strong>Schedule Approval Restricted:</strong> Final application requires Port Manager</span>
+                    </div>
+                  </>
+                )}
+
+                {selectedUser.role === "viewer" && (
+                  <>
+                    <div className="flex items-center gap-2 text-[#102A27]">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>Live Overview:</strong> Real-time Port Congestion Index and operational KPIs</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#102A27]">
+                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span><strong>72h Timeline:</strong> Berth occupancy Gantt chart and vessel queue inspection</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#899491]">
+                      <X className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                      <span><strong>Read-Only Mode:</strong> Restricted from modifying port resources or schedules</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Role Change Inside Profile */}
+            <div className="p-3 bg-[#F7F6F2] rounded-lg border border-[#E3E5E0] space-y-2">
+              <label className="block text-xs font-semibold text-[#102A27]">
+                Update Profile Role:
+              </label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedUser.role}
+                  onChange={(e) => handleRoleUpdate(selectedUser.id, e.target.value)}
+                  className="flex-1 rounded border border-[#D5D9D3] bg-white px-2.5 py-1.5 text-xs font-medium text-[#102A27] focus:border-[#004741] focus:outline-none"
+                >
+                  <option value="admin">Port Manager / Admin (Full Access)</option>
+                  <option value="operations">Operations Staff (Quayside & Solver)</option>
+                  <option value="viewer">Viewer / Executive (Read-Only)</option>
+                </select>
+
+                {updateStatus[selectedUser.id] === "saved" && (
+                  <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600 shrink-0">
+                    <CheckCircle2 className="h-4 w-4" /> Updated
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-[#5C6B68]">
+                Changes take effect across the entire system immediately.
+              </p>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedUser(null)}
+              >
+                Close Profile
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </AppShell>
   );
 }
+

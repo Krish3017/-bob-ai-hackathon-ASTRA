@@ -9,6 +9,7 @@ import {
   OptimizationRun,
   ScheduleItem,
   User,
+  UserRole,
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -279,6 +280,17 @@ export const api = {
     }),
   getMe: () => fetchWithAuth<User>("/api/auth/me"),
   getUsers: () => fetchWithAuth<User[]>("/api/auth/users"),
+  adminCreateUser: (data: {
+    email: string;
+    password: string;
+    full_name: string;
+    department?: string;
+    role?: UserRole | string;
+  }) =>
+    fetchWithAuth<User>("/api/auth/users", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   updateUserRole: (userId: string, role: string) =>
     fetchWithAuth<User>(`/api/auth/users/${userId}/role`, {
       method: "PUT",
