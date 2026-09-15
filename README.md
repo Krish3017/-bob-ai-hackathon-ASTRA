@@ -46,7 +46,6 @@ NaviOps is an industrial-grade Smart Port Operations Command Center and 72-Hour 
 |---|---|
 | **Languages** | Python 3.11, TypeScript |
 | **Frameworks** | FastAPI, Next.js 14 (App Router), React 18, Tailwind CSS |
-| **IBM Technologies** | IBM Bob Hackathon Catalyst Track (Phase 2 watsonx.ai integration readiness) |
 | **Databases** | Supabase PostgreSQL, Relational Fallback Repository (`psycopg3`) |
 | **Other** | Google OR-Tools (CP-SAT v9.9), Groq LPUs, Pydantic v2, PyJWT, Lucide React, Uvicorn |
 
