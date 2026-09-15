@@ -77,8 +77,8 @@ NaviOps is an industrial-grade Smart Port Operations Command Center and 72-Hour 
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/Krish3017/-bob-ai-hackathon-ASTRA.git
-cd -bob-ai-hackathon-ASTRA
+git clone https://github.com/Krish3017/-bob-ai-hackathon-Catalyst.git
+cd -bob-ai-hackathon-Catalyst
 
 # 2. Setup & run Backend (Terminal 1)
 cd src/backend
