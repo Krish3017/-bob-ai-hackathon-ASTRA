@@ -15,7 +15,7 @@
 
 ## 🎯 Problem Statement
 
-> In 2–3 sentences: What problem does your project solve? Who experiences this problem?
+> What problem does your project solve? Who experiences this problem?
 
 Commercial container terminals handle over 80% of world merchandise trade but struggle with severe quayside congestion, where ultra-large container vessels (ULCVs) and unpredictable disruptions cause cascading anchorage queues and idle assets. Terminal directors, berth planners, and shipping lines lack unified real-time visibility, relying on fragmented spreadsheets and manual radio calls that take 2–4 hours per incident. This results in unpredictable turnaround times, costly vessel demurrage ($20,000–$50,000/day per vessel), and millions in underutilized ship-to-shore crane and berth infrastructure.
 
@@ -23,7 +23,7 @@ Commercial container terminals handle over 80% of world merchandise trade but st
 
 ## 💡 Solution
 
-> In 2–3 sentences: What did you build? How does it solve the problem above?
+> What did you build? How does it solve the problem above?
 
 NaviOps is an industrial-grade Smart Port Operations Command Center and 72-Hour Decision Support System that eliminates quayside congestion through mathematical optimization and conversational AI. The platform unifies real-time operational telemetry across 14 vessels, 5 berths, 10 cranes, and 5 yard zones with an explainable, multi-factor Port Congestion Index (0–100) and Google OR-Tools CP-SAT discrete combinatorial optimization. Paired with Bob Copilot—an agentic AI assistant powered by Groq LPUs with 9 live operational tools and human-in-the-loop governance—NaviOps empowers dispatchers to resolve disruptions, eliminate spatial berthing collisions, and reduce vessel waiting times by over 34%.
 
@@ -72,8 +72,6 @@ NaviOps is an industrial-grade Smart Port Operations Command Center and 72-Hour 
 
 ## ⚡ How to Run
 
-> **Copy these exact steps from your [`docs/setup-guide.md`](docs/setup-guide.md)**
-
 ```bash
 # 1. Clone the repo
 git clone https://github.com/Krish3017/-bob-ai-hackathon-Catalyst.git
@@ -115,7 +113,6 @@ npm run dev
 
 ## ⚠️ Known Limitations
 
-> Be honest — judges appreciate transparency over overclaiming.
 
 - **Human-in-the-Loop Safeguard:** Bob Copilot and the OR-Tools optimization engine generate candidate schedules and operational recommendations; schedule applications require human authorization by a Port Manager to ensure quayside safety.
 - **Phase 2 Agentic Autonomy:** Phase 1 delivers complete deterministic CP-SAT optimization, multi-factor congestion diagnostics, and Groq-powered tool-calling Copilot; multi-agent autonomous negotiation (LangGraph / watsonx.ai) will hook into these verified REST endpoints in Phase 2.
