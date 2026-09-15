@@ -152,6 +152,50 @@ export interface OptimizationRun {
     berth_occupancy_ratio: number;
     crane_utilization_ratio: number;
     delay_reduction_pct: number;
+    demurrage_cost_usd?: number;
+    demurrage_saved_usd?: number;
+    co2_emissions_mt?: number;
+    co2_abated_mt?: number;
   };
   created_at: string;
+}
+
+export interface SimulateOptimizationRequest {
+  scenario_name?: string;
+  unavailable_berth_ids?: string[];
+  unavailable_crane_ids?: string[];
+  vessel_delay_hours?: Record<string, number>;
+}
+
+export interface SimulationResponse {
+  scenario_name: string;
+  baseline_metrics: Record<string, any>;
+  simulated_metrics: Record<string, any>;
+  deltas: {
+    waiting_time_delta_hours: number;
+    demurrage_delta_usd: number;
+    co2_delta_mt: number;
+    congestion_score_delta: number;
+  };
+  simulated_schedules: ScheduleItem[];
+  summary: string;
+}
+
+export interface SentinelAlertItem {
+  id: string;
+  disruption_title: string;
+  severity: "Critical" | "High" | "Medium" | "Low";
+  affected_resource: string;
+  at_risk_vessels: string[];
+  estimated_risk_usd: number;
+  recommended_action: string;
+}
+
+export interface SentinelAlertResponse {
+  has_threat: boolean;
+  active_alerts: SentinelAlertItem[];
+  total_risk_exposure_usd: number;
+  total_at_risk_vessels: number;
+  recommended_action: string;
+  runbook_plan_ready: boolean;
 }

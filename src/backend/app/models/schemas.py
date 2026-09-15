@@ -302,6 +302,48 @@ class ApplyScheduleRequest(BaseModel):
 
 
 # -----------------------------------------------------------------------------
+# What-If Simulation Schemas (Digital Twin Sandbox)
+# -----------------------------------------------------------------------------
+class SimulateOptimizationRequest(BaseModel):
+    scenario_name: Optional[str] = "What-If Simulation"
+    unavailable_berth_ids: Optional[List[str]] = Field(default_factory=list)
+    unavailable_crane_ids: Optional[List[str]] = Field(default_factory=list)
+    vessel_delay_hours: Optional[Dict[str, float]] = Field(default_factory=dict)
+
+
+class SimulationResponse(BaseModel):
+    scenario_name: str
+    baseline_metrics: Dict[str, Any]
+    simulated_metrics: Dict[str, Any]
+    deltas: Dict[str, Any]
+    simulated_schedules: List[ScheduleItemResponse]
+    summary: str
+
+
+# -----------------------------------------------------------------------------
+# Proactive Disruption Sentinel Schemas
+# -----------------------------------------------------------------------------
+class SentinelAlertItem(BaseModel):
+    id: str
+    disruption_title: str
+    severity: str
+    affected_resource: str
+    at_risk_vessels: List[str]
+    estimated_risk_usd: float
+    recommended_action: str
+
+
+class SentinelAlertResponse(BaseModel):
+    has_threat: bool
+    active_alerts: List[SentinelAlertItem]
+    total_risk_exposure_usd: float
+    total_at_risk_vessels: int
+    recommended_action: str
+    runbook_plan_ready: bool
+
+
+
+# -----------------------------------------------------------------------------
 # Copilot Chat Schemas
 # -----------------------------------------------------------------------------
 class CopilotMessage(BaseModel):

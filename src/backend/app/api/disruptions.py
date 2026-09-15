@@ -4,7 +4,14 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.core.database import port_repo
 from app.core.auth import get_current_user, require_role
-from app.models.schemas import DisruptionCreate, DisruptionUpdate, DisruptionResponse, UserResponse
+from app.models.schemas import (
+    DisruptionCreate,
+    DisruptionUpdate,
+    DisruptionResponse,
+    UserResponse,
+    SentinelAlertResponse,
+    SentinelAlertItem
+)
 
 router = APIRouter(prefix="/api/disruptions", tags=["Disruptions"])
 
@@ -20,6 +27,89 @@ def get_all_disruptions(
         disruptions = [d for d in disruptions if d.get("status", "").lower() == status.lower()]
     disruptions.sort(key=lambda d: str(d.get("created_at", "")), reverse=True)
     return [DisruptionResponse(**d) for d in disruptions]
+
+
+@router.get("/sentinel", response_model=SentinelAlertResponse)
+def get_disruption_sentinel(
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Proactive Disruption Sentinel.
+    Evaluates active incidents, identifies at-risk vessels, quantifies financial risk,
+    and drafts an automated 1-click mitigation runbook plan.
+    """
+    active_disruptions = [d for d in port_repo.disruptions.values() if d.get("status") == "Active"]
+    alerts = []
+    total_risk = 0.0
+    all_at_risk_vessel_ids = set()
+
+    for d in active_disruptions:
+        res_type = d.get("affected_resource_type", "").lower()
+        res_id = d.get("affected_resource_id")
+        severity = d.get("severity", "Medium")
+
+        impacted_vessels = []
+        if res_type == "berth" and res_id:
+            for v in port_repo.vessels.values():
+                if v.get("assigned_berth_id") == res_id:
+                    impacted_vessels.append(v.get("vessel_name", v.get("vessel_code", "Vessel")))
+                    all_at_risk_vessel_ids.add(v.get("id"))
+        elif res_type == "crane" and res_id:
+            crane = port_repo.cranes.get(res_id)
+            if crane and crane.get("assigned_berth_id"):
+                c_berth_id = crane.get("assigned_berth_id")
+                for v in port_repo.vessels.values():
+                    if v.get("assigned_berth_id") == c_berth_id:
+                        impacted_vessels.append(v.get("vessel_name", v.get("vessel_code", "Vessel")))
+                        all_at_risk_vessel_ids.add(v.get("id"))
+        elif res_type == "vessel" and res_id:
+            v = port_repo.vessels.get(res_id)
+            if v:
+                impacted_vessels.append(v.get("vessel_name", v.get("vessel_code", "Vessel")))
+                all_at_risk_vessel_ids.add(v.get("id"))
+
+        if not impacted_vessels:
+            waiting_vessels = [v for v in port_repo.vessels.values() if v.get("status") in ["Waiting", "Delayed"]]
+            impacted_vessels = [v.get("vessel_name", "Vessel") for v in waiting_vessels[:2]]
+
+        sev_multiplier = {"Critical": 45000.0, "High": 25000.0, "Medium": 12000.0, "Low": 5000.0}.get(severity, 10000.0)
+        risk_exposure = round(sev_multiplier * max(1, len(impacted_vessels)), 2)
+        total_risk += risk_exposure
+
+        if res_type == "berth":
+            rec_action = "Reroute affected vessels to adjacent available berths via 72h CP-SAT optimizer."
+        elif res_type == "crane":
+            rec_action = "Reassign backup operational STS cranes to maintain container moves/hr target."
+        else:
+            rec_action = "Trigger 72h CP-SAT optimization to minimize downstream liner delays."
+
+        alerts.append(
+            SentinelAlertItem(
+                id=d.get("id", str(uuid.uuid4())),
+                disruption_title=d.get("title", "Operational Disruption"),
+                severity=severity,
+                affected_resource=f"{res_type.upper()}: {res_id or 'Port General'}",
+                at_risk_vessels=impacted_vessels,
+                estimated_risk_usd=risk_exposure,
+                recommended_action=rec_action
+            )
+        )
+
+    has_threat = len(alerts) > 0
+    overall_recommendation = (
+        f"Critical operational risks detected across {len(alerts)} active incidents. "
+        f"Immediate 72-hour CP-SAT optimization recommended to safeguard ${total_risk:,.0f} in demurrage exposure."
+        if has_threat else "All quayside and yard operations nominal. No active disruption threats detected."
+    )
+
+    return SentinelAlertResponse(
+        has_threat=has_threat,
+        active_alerts=alerts,
+        total_risk_exposure_usd=round(total_risk, 2),
+        total_at_risk_vessels=len(all_at_risk_vessel_ids),
+        recommended_action=overall_recommendation,
+        runbook_plan_ready=has_threat
+    )
 
 
 @router.post("", response_model=DisruptionResponse, status_code=status.HTTP_201_CREATED)

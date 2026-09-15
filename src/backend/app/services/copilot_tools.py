@@ -37,6 +37,7 @@ ALLOWED_TOOLS = {
     "get_yard_capacity",
     "get_active_disruptions",
     "get_latest_optimization_plan",
+    "simulate_scenario",
 }
 
 # ---------------------------------------------------------------------------
@@ -197,6 +198,39 @@ TOOL_DEFINITIONS: List[Dict[str, Any]] = [
             "parameters": {"type": "object", "properties": {}, "required": []},
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "simulate_scenario",
+            "description": (
+                "Run an operational What-If simulation (Port Digital Twin) without modifying live data. "
+                "Simulates the impact of unavailable berths, offline cranes, or vessel arrival delays on "
+                "cumulative waiting time, financial demurrage cost ($), and the Port Congestion Index. "
+                "Use this when the user asks 'What if Berth 1 is closed?', 'What happens if Crane 2 breaks down?', "
+                "or asks to simulate an operational scenario."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "scenario_name": {
+                        "type": "string",
+                        "description": "Short descriptive name of the simulation scenario."
+                    },
+                    "unavailable_berth_codes": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of berth codes to simulate as unavailable (e.g. ['B-01', 'B-02'])."
+                    },
+                    "unavailable_crane_codes": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of crane codes to simulate as failed (e.g. ['CR-01', 'CR-02'])."
+                    }
+                },
+                "required": []
+            },
+        },
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -292,6 +326,8 @@ def _dispatch(tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         return _get_active_disruptions()
     if tool_name == "get_latest_optimization_plan":
         return _get_latest_optimization_plan()
+    if tool_name == "simulate_scenario":
+        return _simulate_scenario(args)
     # Unreachable — allowlist catches unknowns before dispatch
     raise ValueError(f"Unhandled tool: {tool_name}")
 
@@ -671,3 +707,77 @@ def _get_latest_optimization_plan() -> Dict[str, Any]:
             "schedule": schedules_summary,
         },
     }
+
+
+def _simulate_scenario(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Run counterfactual What-If optimization simulation."""
+    from app.optimization.optimizer import PortOptimizer
+
+    scenario_name = str(args.get("scenario_name") or "What-If Simulation")
+    raw_berths = args.get("unavailable_berth_codes") or []
+    raw_cranes = args.get("unavailable_crane_codes") or []
+
+    unavail_berth_codes = [str(c).upper().strip() for c in raw_berths if c]
+    unavail_crane_codes = [str(c).upper().strip() for c in raw_cranes if c]
+
+    # Resolve IDs
+    unavail_berth_ids = [
+        b["id"] for b in port_repo.berths.values()
+        if b.get("berth_code", "").upper() in unavail_berth_codes
+    ]
+    unavail_crane_ids = [
+        c["id"] for c in port_repo.cranes.values()
+        if c.get("crane_code", "").upper() in unavail_crane_codes
+    ]
+
+    # Baseline
+    baseline_opt = PortOptimizer(
+        vessels=list(port_repo.vessels.values()),
+        berths=list(port_repo.berths.values()),
+        cranes=list(port_repo.cranes.values()),
+        disruptions=list(port_repo.disruptions.values()),
+        horizon_hours=72
+    )
+    base_run = baseline_opt.solve()
+    base_wait = float(base_run.get("total_waiting_time", 0.0))
+    base_demurrage = float(base_run.get("metrics", {}).get("demurrage_cost_usd", 0.0))
+
+    # Simulated
+    sim_opt = PortOptimizer(
+        vessels=list(port_repo.vessels.values()),
+        berths=list(port_repo.berths.values()),
+        cranes=list(port_repo.cranes.values()),
+        disruptions=list(port_repo.disruptions.values()),
+        horizon_hours=72,
+        simulation_overrides={
+            "unavailable_berth_ids": unavail_berth_ids,
+            "unavailable_crane_ids": unavail_crane_ids
+        }
+    )
+    sim_run = sim_opt.solve()
+    sim_wait = float(sim_run.get("total_waiting_time", 0.0))
+    sim_demurrage = float(sim_run.get("metrics", {}).get("demurrage_cost_usd", 0.0))
+
+    wait_delta = round(sim_wait - base_wait, 1)
+    demurrage_delta = round(sim_demurrage - base_demurrage, 2)
+
+    return {
+        "status": "ok",
+        "source": "naviops_simulator",
+        "data_timestamp": _iso(datetime.now(timezone.utc)),
+        "result_count": 1,
+        "simulation": {
+            "scenario_name": scenario_name,
+            "simulated_unavailable_berths": unavail_berth_codes,
+            "simulated_unavailable_cranes": unavail_crane_codes,
+            "baseline_waiting_hours": base_wait,
+            "simulated_waiting_hours": sim_wait,
+            "waiting_time_delta_hours": wait_delta,
+            "demurrage_delta_usd": demurrage_delta,
+            "summary": (
+                f"Simulating scenario '{scenario_name}' causes a {wait_delta:+.1f}h shift "
+                f"in vessel waiting time with ${demurrage_delta:+,.0f} demurrage exposure delta."
+            )
+        }
+    }
+
