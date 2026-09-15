@@ -341,3 +341,40 @@ def test_admin_create_user():
     assert res_dup.status_code == 400
     assert "already registered" in res_dup.json()["detail"]
 
+
+def test_what_if_simulation_endpoint():
+    admin_token = create_access_token({"sub": "11111111-1111-1111-1111-111111111111", "email": "admin@naviops.port", "role": "admin"})
+    res = client.post(
+        "/api/optimization/simulate",
+        json={
+            "scenario_name": "Test Crane Breakdown",
+            "unavailable_crane_ids": ["c0000001-0000-0000-0000-000000000001"],
+            "unavailable_berth_ids": []
+        },
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["scenario_name"] == "Test Crane Breakdown"
+    assert "baseline_metrics" in data
+    assert "simulated_metrics" in data
+    assert "deltas" in data
+    assert "simulated_schedules" in data
+    assert "demurrage_delta_usd" in data["deltas"]
+    assert "co2_delta_mt" in data["deltas"]
+
+
+def test_disruption_sentinel_endpoint():
+    admin_token = create_access_token({"sub": "11111111-1111-1111-1111-111111111111", "email": "admin@naviops.port", "role": "admin"})
+    res = client.get(
+        "/api/disruptions/sentinel",
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "has_threat" in data
+    assert "active_alerts" in data
+    assert "total_risk_exposure_usd" in data
+    assert "recommended_action" in data
+
+

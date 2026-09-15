@@ -10,6 +10,9 @@ import {
   ScheduleItem,
   User,
   UserRole,
+  SimulateOptimizationRequest,
+  SimulationResponse,
+  SentinelAlertResponse,
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -182,6 +185,8 @@ export const api = {
     fetchWithAuth<void>(`/api/disruptions/${id}`, {
       method: "DELETE",
     }),
+  getDisruptionSentinel: () =>
+    fetchWithAuth<SentinelAlertResponse>("/api/disruptions/sentinel"),
 
   // Optimization
   runOptimization: () =>
@@ -192,6 +197,11 @@ export const api = {
     fetchWithAuth<OptimizationRun>("/api/optimization/runs/latest"),
   listOptimizationRuns: () =>
     fetchWithAuth<OptimizationRun[]>("/api/optimization/runs"),
+  simulateOptimization: (payload: SimulateOptimizationRequest) =>
+    fetchWithAuth<SimulationResponse>("/api/optimization/simulate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   applySchedule: (runId: string) =>
     fetchWithAuth<{ status: string; message: string }>("/api/optimization/apply", {
       method: "POST",

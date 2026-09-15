@@ -42,6 +42,7 @@ Always call the relevant tool(s) for current operational questions. Never guess 
 - get_yard_capacity — yard zone utilization
 - get_active_disruptions — active incidents and severity
 - get_latest_optimization_plan — most recent 72-hour schedule
+- simulate_scenario — run What-If simulations for unavailable berths/cranes
 
 Call only the tools needed. If a tool returns empty data, say so — do not invent values.
 

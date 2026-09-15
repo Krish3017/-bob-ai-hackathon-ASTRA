@@ -3,7 +3,14 @@ from typing import List, Dict, Any
 from app.core.database import port_repo
 from app.core.auth import get_current_user, require_role
 from app.optimization.optimizer import PortOptimizer
-from app.models.schemas import OptimizationRunResponse, ScheduleItemResponse, ApplyScheduleRequest, UserResponse
+from app.models.schemas import (
+    OptimizationRunResponse,
+    ScheduleItemResponse,
+    ApplyScheduleRequest,
+    UserResponse,
+    SimulateOptimizationRequest,
+    SimulationResponse
+)
 
 router = APIRouter(prefix="/api/optimization", tags=["Optimization Engine"])
 
@@ -136,3 +143,87 @@ def apply_optimization_schedule(
         "message": f"Successfully applied schedule plan to {applied_count} vessels.",
         "run_id": req.run_id
     }
+
+
+@router.post("/simulate", response_model=SimulationResponse)
+def simulate_optimization(
+    req: SimulateOptimizationRequest,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    What-If Scenario Sandbox (Port Digital Twin).
+    Simulates operational conditions (disabled berths/cranes, vessel delays)
+    and computes the counterfactual 72-hour CP-SAT schedule and deltas
+    without mutating live port state.
+    """
+    # 1. Baseline optimization run
+    baseline_optimizer = PortOptimizer(
+        vessels=list(port_repo.vessels.values()),
+        berths=list(port_repo.berths.values()),
+        cranes=list(port_repo.cranes.values()),
+        disruptions=list(port_repo.disruptions.values()),
+        horizon_hours=72
+    )
+    baseline_run = baseline_optimizer.solve()
+    baseline_metrics = baseline_run["metrics"]
+    baseline_waiting = float(baseline_run.get("total_waiting_time", 0.0))
+
+    # 2. Simulated optimization run with overrides
+    overrides = {
+        "unavailable_berth_ids": req.unavailable_berth_ids or [],
+        "unavailable_crane_ids": req.unavailable_crane_ids or [],
+        "vessel_delay_hours": req.vessel_delay_hours or {}
+    }
+    sim_optimizer = PortOptimizer(
+        vessels=list(port_repo.vessels.values()),
+        berths=list(port_repo.berths.values()),
+        cranes=list(port_repo.cranes.values()),
+        disruptions=list(port_repo.disruptions.values()),
+        horizon_hours=72,
+        simulation_overrides=overrides
+    )
+    sim_run = sim_optimizer.solve()
+    sim_metrics = sim_run["metrics"]
+    sim_waiting = float(sim_run.get("total_waiting_time", 0.0))
+
+    # Calculate deltas
+    waiting_delta = round(sim_waiting - baseline_waiting, 1)
+    demurrage_delta = round(sim_metrics.get("demurrage_cost_usd", 0.0) - baseline_metrics.get("demurrage_cost_usd", 0.0), 2)
+    co2_delta = round(sim_metrics.get("co2_emissions_mt", 0.0) - baseline_metrics.get("co2_emissions_mt", 0.0), 1)
+
+    from app.congestion.calculator import calculate_port_congestion
+    baseline_congestion = calculate_port_congestion(
+        vessels=list(port_repo.vessels.values()),
+        berths=list(port_repo.berths.values()),
+        cranes=list(port_repo.cranes.values()),
+        yards=list(port_repo.yards.values()),
+        disruptions=list(port_repo.disruptions.values())
+    )
+    extra_penalty = len(req.unavailable_berth_ids or []) * 5.0 + len(req.unavailable_crane_ids or []) * 3.0
+    sim_congestion_score = round(min(100.0, baseline_congestion.score + extra_penalty), 1)
+    congestion_delta = round(sim_congestion_score - baseline_congestion.score, 1)
+
+    deltas = {
+        "waiting_time_delta_hours": waiting_delta,
+        "demurrage_delta_usd": demurrage_delta,
+        "co2_delta_mt": co2_delta,
+        "congestion_score_delta": congestion_delta
+    }
+
+    impact_dir = "increase" if waiting_delta >= 0 else "reduction"
+    cost_dir = "added cost" if demurrage_delta >= 0 else "cost savings"
+    summary_text = (
+        f"Simulated scenario '{req.scenario_name}' results in a {abs(waiting_delta):.1f}h {impact_dir} "
+        f"in cumulative vessel waiting time with ${abs(demurrage_delta):,.0f} {cost_dir}. "
+        f"Congestion index shifts by {congestion_delta:+.1f} points."
+    )
+
+    return SimulationResponse(
+        scenario_name=req.scenario_name or "Custom What-If Scenario",
+        baseline_metrics=baseline_metrics,
+        simulated_metrics=sim_metrics,
+        deltas=deltas,
+        simulated_schedules=sim_run["schedules"],
+        summary=summary_text
+    )
+

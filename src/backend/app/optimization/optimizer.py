@@ -1,7 +1,7 @@
 import math
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from ortools.sat.python import cp_model
 from app.models.schemas import OptimizationRunResponse, ScheduleItemResponse
 
@@ -19,16 +19,51 @@ class PortOptimizer:
         berths: List[Dict[str, Any]],
         cranes: List[Dict[str, Any]],
         disruptions: List[Dict[str, Any]],
-        horizon_hours: int = 72
+        horizon_hours: int = 72,
+        simulation_overrides: Optional[Dict[str, Any]] = None
     ):
         self.now = datetime.now(timezone.utc)
         self.horizon_hours = horizon_hours
-        self.vessels = [v for v in vessels if v.get("status") not in ["Completed", "Unloading", "Loading"]]
-        # Include vessels already berthing or currently arriving/waiting/scheduled
-        self.all_vessels = vessels
-        self.berths = berths
-        self.cranes = cranes
+        self.simulation_overrides = simulation_overrides or {}
+
+        # Clone and apply simulation overrides if provided
+        sim_unavail_berths = set(self.simulation_overrides.get("unavailable_berth_ids", []))
+        sim_unavail_cranes = set(self.simulation_overrides.get("unavailable_crane_ids", []))
+        sim_vessel_delays = self.simulation_overrides.get("vessel_delay_hours", {})
+
+        # Process berths
+        self.berths = []
+        for b in berths:
+            b_copy = dict(b)
+            if b_copy["id"] in sim_unavail_berths:
+                b_copy["status"] = "Unavailable"
+            self.berths.append(b_copy)
+
+        # Process cranes
+        self.cranes = []
+        for c in cranes:
+            c_copy = dict(c)
+            if c_copy["id"] in sim_unavail_cranes:
+                c_copy["status"] = "Failed"
+            self.cranes.append(c_copy)
+
         self.disruptions = disruptions
+
+        # Process vessels with potential delay adjustments
+        self.all_vessels = []
+        for v in vessels:
+            v_copy = dict(v)
+            if v_copy["id"] in sim_vessel_delays:
+                extra_delay = float(sim_vessel_delays[v_copy["id"]])
+                # Shift ETA by extra delay
+                orig_eta = v_copy.get("eta")
+                if isinstance(orig_eta, str):
+                    orig_eta = datetime.fromisoformat(orig_eta.replace("Z", "+00:00"))
+                v_copy["eta"] = orig_eta + timedelta(hours=extra_delay)
+                v_copy["expected_waiting_time"] = float(v_copy.get("expected_waiting_time", 0.0)) + extra_delay
+            self.all_vessels.append(v_copy)
+
+        self.vessels = [v for v in self.all_vessels if v.get("status") not in ["Completed", "Unloading", "Loading"]]
 
     def solve(self) -> Dict[str, Any]:
         # Pre-optimization baseline: sum of expected_waiting_time already on each vessel
@@ -278,6 +313,12 @@ class PortOptimizer:
                         max(1.0, pre_opt_waiting_hours) * 100.0),
                     1
                 ),
+                # Demurrage Financials ($1,250/hr average demurrage cost across container fleet)
+                "demurrage_cost_usd": round(float(total_waiting_hours * 1250.0), 2),
+                "demurrage_saved_usd": round(max(0.0, (pre_opt_waiting_hours - total_waiting_hours) * 1250.0), 2),
+                # GreenPort ESG: Decarbonization from reduced anchorage idling (0.35 MT CO2 / waiting hr)
+                "co2_emissions_mt": round(float(total_waiting_hours * 0.35), 1),
+                "co2_abated_mt": round(max(0.0, (pre_opt_waiting_hours - total_waiting_hours) * 0.35), 1),
             },
             "created_at": self.now
         }
