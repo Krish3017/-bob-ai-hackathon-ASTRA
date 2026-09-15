@@ -9,16 +9,16 @@
 # =============================================================================
 
 team:
-  name: "ASTRA"                             # REQUIRED — e.g., "Orion Squad"
-  track: "AI"                            # REQUIRED — one of: AI | DevOps | Sustainability | Open
+  name: "Catalyst"
+  track: "AI"                            
   lead:
-    name: "Sarthak Talaviya"                           # REQUIRED — e.g., "Alice Chen"
-    email: "24dcs131@charusat.edu.in"                          # REQUIRED — e.g., "alice.chen@ibm.com"
+    name: "Sarthak Talaviya"             
+    email: "24dcs131@charusat.edu.in"                          
   members:
-    - name: "Krish Ramanandi"                         # REQUIRED — Team member 1
-      email: "24dcs107@charusat.edu.in"
-    - name: "Harshit Pambhar"                         # Add more members by copying the two lines above
+    - name: "Harshit Pambhar"                         
       email: "24dcs060@charusat.edu.in"
+    - name: "Krish Ramanandi"                         
+      email: "24dcs107@charusat.edu.in"
     - name: "Smit Sureja"
       email: "24aiml066@charusat.edu.in"
 
@@ -43,7 +43,7 @@ submission:
   tech_stack:
     languages: ["Python", "TypeScript"]
     frameworks: ["FastAPI", "Next.js 14", "React", "Tailwind CSS"]
-    ibm_technologies: ["IBM Bob Hackathon ASTRA Track"]
+    ibm_technologies: ["IBM Bob Hackathon Catalyst Track"]
     databases: ["Supabase PostgreSQL"]
     other: ["Google OR-Tools (CP-SAT)", "Lucide React", "Pydantic v2", "Uvicorn"]
 

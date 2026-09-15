@@ -290,7 +290,7 @@ sequenceDiagram
 ## 7. Repository File & Architectural Mapping
 
 ```
-d:/-bob-ai-hackathon-ASTRA/
+d:/-bob-ai-hackathon-Catalyst/
 ├── src/
 │   ├── backend/
 │   │   ├── app/

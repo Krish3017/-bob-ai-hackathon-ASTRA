@@ -6,7 +6,7 @@
 
 | Field | Value |
 |---|---|
-| **Team Name** | ASTRA |
+| **Team Name** | Catalyst |
 | **Track** | AI |
 | **Team Lead** | Sarthak Talaviya — 24dcs131@charusat.edu.in |
 | **Members** | Krish Ramanandi, Harshit Pambhar, Smit Sureja |
@@ -47,7 +47,7 @@ The platform features an intelligent dispatch system that dynamically assigns cr
 |---|---|
 | **Languages** | Python, TypeScript |
 | **Frameworks** | FastAPI, Next.js 14, React, Tailwind CSS |
-| **IBM Technologies** | IBM Bob Hackathon ASTRA Track |
+| **IBM Technologies** | IBM Bob Hackathon Catalyst Track |
 | **Databases** | Supabase PostgreSQL |
 | **Other** | Google OR-Tools (CP-SAT), Lucide React, Pydantic v2, Uvicorn |
 
@@ -77,8 +77,8 @@ The platform features an intelligent dispatch system that dynamically assigns cr
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/Krish3017/-bob-ai-hackathon-ASTRA.git
-cd -bob-ai-hackathon-ASTRA
+git clone https://github.com/Krish3017/-bob-ai-hackathon-Catalyst.git
+cd -bob-ai-hackathon-Catalyst
 
 # 2. Install dependencies
 # Backend

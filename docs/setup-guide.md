@@ -19,7 +19,7 @@ Ensure the following runtimes and tools are installed on your workstation:
 
 ## 2. Quick Start (Windows PowerShell)
 
-Open PowerShell in the project root directory (`-bob-ai-hackathon-ASTRA`):
+Open PowerShell in the project root directory (`-bob-ai-hackathon-Catalyst`):
 
 ### Terminal 1: Backend Setup & Launch
 ```powershell
